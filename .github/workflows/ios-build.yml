@@ -77,7 +77,7 @@ jobs:
         api-private-key: ${{ secrets.APPSTORE_PRIVATE_KEY }}
         
     - name: Upload IPA as Artifact
-      uses: actions/upload-artifact@v3
+      uses: actions/upload-artifact@v4
       with:
         name: ios-build
         path: ios/Runner.ipa
