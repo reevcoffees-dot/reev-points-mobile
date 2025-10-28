@@ -22,7 +22,10 @@ jobs:
         channel: 'stable'
         
     - name: Install Flutter Dependencies
-      run: flutter pub get
+      run: |
+        flutter clean
+        flutter pub get
+        cd ios && pod install --repo-update
       
     - name: Verify iOS Configuration
       run: |
