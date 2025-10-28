@@ -25,6 +25,7 @@ jobs:
       run: |
         flutter clean
         rm -f pubspec.lock
+        flutter pub cache clean
         flutter pub get
         cd ios && rm -rf Pods Podfile.lock && pod install --repo-update
       

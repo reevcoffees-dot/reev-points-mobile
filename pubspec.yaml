@@ -41,7 +41,7 @@ dependencies:
   
   # Utils
   intl: ^0.18.1
-  url_launcher: ^6.3.0
+  url_launcher: ^6.2.5
   
   # Localization
   flutter_localizations:
