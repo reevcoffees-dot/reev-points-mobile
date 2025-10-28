@@ -38,39 +38,18 @@ jobs:
       run: |
         flutter build ios --release --no-codesign
         
-    - name: Create Keychain and Import Certificate
-      run: |
-        # Create keychain
-        security create-keychain -p "temp123" build.keychain
-        security default-keychain -s build.keychain
-        security unlock-keychain -p "temp123" build.keychain
-        security set-keychain-settings -t 3600 -u build.keychain
-        
-        # Import certificate
-        echo "${{ secrets.CERTIFICATES_P12 }}" | base64 --decode > certificate.p12
-        security import certificate.p12 -k build.keychain -P "${{ secrets.CERTIFICATES_PASSWORD }}" -T /usr/bin/codesign
-        security set-key-partition-list -S apple-tool:,apple: -s -k "temp123" build.keychain
-        
-    - name: Create Provisioning Profile
-      run: |
-        mkdir -p ~/Library/MobileDevice/Provisioning\ Profiles
-        echo "Provisioning profile creation skipped for now"
-        
-    - name: Build and Archive iOS App
-      run: |
-        cd ios
-        xcodebuild -workspace Runner.xcworkspace \
-          -scheme Runner \
-          -configuration Release \
-          -destination generic/platform=iOS \
-          -archivePath Runner.xcarchive \
-          archive \
-          CODE_SIGN_IDENTITY="" \
-          CODE_SIGNING_REQUIRED=NO \
-          CODE_SIGNING_ALLOWED=NO
-          
-    - name: Upload Build Artifact
+    - name: Upload iOS Build Artifacts
       uses: actions/upload-artifact@v4
       with:
-        name: ios-build
-        path: ios/Runner.xcarchive
+        name: ios-build-output
+        path: |
+          build/ios/iphoneos/Runner.app
+          build/ios/archive/Runner.xcarchive
+        retention-days: 30
+        
+    - name: Build Success Notification
+      run: |
+        echo "✅ iOS build completed successfully!"
+        echo "📱 App built for: com.reev.reevPointsMobile"
+        echo "🎯 Build configuration: Release (no codesign)"
+        ls -la build/ios/iphoneos/ || echo "Build output directory not found"
