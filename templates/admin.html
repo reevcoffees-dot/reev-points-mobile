@@ -1,0 +1,2927 @@
+{% extends "base.html" %}
+
+// Fonksiyonları global scope'a export et
+window.editProduct = editProduct;
+window.saveProductChanges = saveProductChanges;
+window.deleteProduct = deleteProduct;
+window.toggleProduct = toggleProduct;
+window.hardDeleteProduct = hardDeleteProduct;
+
+{% block title %}Admin Panel - Cafe Sadakat{% endblock %}
+
+{% block content %}
+<div class="container mt-4">
+    <div class="row">
+        <div class="col-12">
+            <div class="card mb-4">
+                <div class="card-header bg-dark text-white">
+                    <h4><i class="fas fa-cog"></i> Admin Paneli</h4>
+                </div>
+                <div class="card-body">
+                    <div class="row">
+                        <div class="col-md-2 text-center">
+                            <h3 class="text-primary">{{ users|length }}</h3>
+                            <p>Toplam Üye</p>
+                        </div>
+                        <div class="col-md-2 text-center">
+                            <h3 class="text-warning">{{ branches|length }}</h3>
+                            <p>Şube Sayısı</p>
+                        </div>
+                        <div class="col-md-2 text-center">
+                            <h3 class="text-success">{{ transactions|length }}</h3>
+                            <p>Son İşlemler</p>
+                        </div>
+                        <div class="col-md-2 text-center">
+                            <h3 class="text-secondary">{{ qr_codes|length }}</h3>
+                            <p>Son QR Kodlar</p>
+                        </div>
+                        <div class="col-md-2 text-center">
+                            <h3 class="text-info">{{ users|sum(attribute='points') }}</h3>
+                            <p>Toplam Puan</p>
+                        </div>
+                        <div class="col-md-2 text-center">
+                            <h3 class="text-success">{{ branches|selectattr('is_active')|list|length }}</h3>
+                            <p>Aktif Şube</p>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+    
+    <div class="row">
+        <div class="col-md-4">
+            <div class="card mb-4">
+                <div class="card-header">
+                    <h5><i class="fas fa-image"></i> Site Logosu</h5>
+                </div>
+                <div class="card-body">
+                    {% if current_logo and current_logo.value %}
+                        <div class="text-center mb-3">
+                            <img src="{{ url_for('static', filename='uploads/' + current_logo.value) }}" 
+                                 alt="Mevcut Logo" 
+                                 class="img-fluid" 
+                                 style="max-height: 100px; max-width: 200px;">
+                            <p class="text-muted mt-2">Mevcut Logo</p>
+                        </div>
+                    {% else %}
+                        <div class="text-center mb-3">
+                            <i class="fas fa-image fa-3x text-muted"></i>
+                            <p class="text-muted mt-2">Henüz logo yüklenmemiş</p>
+                        </div>
+                    {% endif %}
+                    
+                    <form id="logoForm" enctype="multipart/form-data">
+                        <div class="mb-3">
+                            <label for="logoFile" class="form-label">Yeni Logo Yükle</label>
+                            <input type="file" class="form-control" id="logoFile" name="logo" accept="image/*" required>
+                            <div class="form-text">PNG, JPG, JPEG formatları desteklenir. Maksimum 16MB.</div>
+                        </div>
+                        <button type="submit" class="btn btn-primary w-100">
+                            <i class="fas fa-upload"></i> Logo Yükle
+                        </button>
+                    </form>
+                    
+                    <div id="logoResult" class="mt-3" style="display: none;"></div>
+                </div>
+            </div>
+            
+            <div class="card mb-4">
+                <div class="card-header">
+                    <h5><i class="fas fa-image"></i> Arka Plan Resmi</h5>
+                </div>
+                <div class="card-body">
+                    {% if current_background and current_background.value %}
+                        <div class="text-center mb-3">
+                            <img src="{{ url_for('static', filename='uploads/' + current_background.value) }}" 
+                                 alt="Mevcut Arka Plan" 
+                                 class="img-fluid" 
+                                 style="max-height: 150px; max-width: 300px; border-radius: 10px;">
+                            <p class="text-muted mt-2">Mevcut Arka Plan</p>
+                        </div>
+                    {% else %}
+                        <div class="text-center mb-3">
+                            <i class="fas fa-image fa-3x text-muted"></i>
+                            <p class="text-muted mt-2">Henüz arka plan resmi yüklenmemiş</p>
+                        </div>
+                    {% endif %}
+                    
+                    <form id="backgroundForm" enctype="multipart/form-data">
+                        <div class="mb-3">
+                            <label for="backgroundFile" class="form-label">Yeni Arka Plan Yükle</label>
+                            <input type="file" class="form-control" id="backgroundFile" name="background" accept="image/*" required>
+                            <div class="form-text">PNG, JPG, JPEG formatları desteklenir. Maksimum 16MB. Önerilen boyut: 1920x1080px</div>
+                        </div>
+                        <button type="submit" class="btn btn-primary w-100">
+                            <i class="fas fa-upload"></i> Arka Plan Yükle
+                        </button>
+                    </form>
+                    
+                    <div id="backgroundResult" class="mt-3" style="display: none;"></div>
+                </div>
+            </div>
+            
+            <div class="card mb-4">
+                <div class="card-header">
+                    <h5><i class="fas fa-mobile-alt"></i> Splash Ekranı Resmi</h5>
+                </div>
+                <div class="card-body">
+                    {% if current_splash and current_splash.value %}
+                        <div class="text-center mb-3">
+                            <img src="{{ url_for('static', filename='uploads/' + current_splash.value) }}" 
+                                 alt="Mevcut Splash Resmi" 
+                                 class="img-fluid" 
+                                 style="max-height: 200px; max-width: 150px; border-radius: 10px; box-shadow: 0 2px 8px rgba(0,0,0,0.1);">
+                            <p class="text-muted mt-2">Mevcut Splash Resmi</p>
+                        </div>
+                    {% else %}
+                        <div class="text-center mb-3">
+                            <i class="fas fa-mobile-alt fa-3x text-muted"></i>
+                            <p class="text-muted mt-2">Henüz splash resmi yüklenmemiş</p>
+                        </div>
+                    {% endif %}
+                    
+                    <form id="splashForm" enctype="multipart/form-data">
+                        <div class="mb-3">
+                            <label for="splashFile" class="form-label">Yeni Splash Resmi Yükle</label>
+                            <input type="file" class="form-control" id="splashFile" name="splash" accept="image/*" required>
+                            <div class="form-text">PNG, JPG, JPEG formatları desteklenir. Maksimum 16MB. Önerilen boyut: 1080x1920px (9:16 oran)</div>
+                        </div>
+                        <button type="submit" class="btn btn-primary w-100">
+                            <i class="fas fa-upload"></i> Splash Resmi Yükle
+                        </button>
+                    </form>
+                    
+                    <div id="splashResult" class="mt-3" style="display: none;"></div>
+                </div>
+            </div>
+            
+            <div class="card mb-4">
+                <div class="card-header">
+                    <h5><i class="fas fa-mobile-alt"></i> App Icon</h5>
+                </div>
+                <div class="card-body">
+                    {% if current_app_icon and current_app_icon.value %}
+                        <div class="text-center mb-3">
+                            <img src="{{ url_for('static', filename='uploads/' + current_app_icon.value) }}" 
+                                 alt="Mevcut App Icon" 
+                                 class="img-fluid" 
+                                 style="max-height: 120px; max-width: 120px; border-radius: 20px; box-shadow: 0 4px 12px rgba(0,0,0,0.15);">
+                            <p class="text-muted mt-2">Mevcut App Icon</p>
+                        </div>
+                    {% else %}
+                        <div class="text-center mb-3">
+                            <div class="d-inline-flex align-items-center justify-content-center" 
+                                 style="width: 120px; height: 120px; background: linear-gradient(135deg, #667eea 0%, #764ba2 100%); border-radius: 20px;">
+                                <i class="fas fa-coffee fa-3x text-white"></i>
+                            </div>
+                            <p class="text-muted mt-2">Varsayılan App Icon</p>
+                        </div>
+                    {% endif %}
+                    
+                    <form id="appIconForm" enctype="multipart/form-data">
+                        <div class="mb-3">
+                            <label for="appIconFile" class="form-label">Yeni App Icon Yükle</label>
+                            <input type="file" class="form-control" id="appIconFile" name="app_icon" accept="image/*" required>
+                            <div class="form-text">
+                                <strong>Önerilen:</strong> 1024x1024px PNG formatı. Maksimum 16MB.<br>
+                                <small class="text-info">
+                                    <i class="fas fa-info-circle"></i> Icon otomatik olarak farklı boyutlarda oluşturulacak.
+                                </small>
+                            </div>
+                        </div>
+                        <button type="submit" class="btn btn-primary w-100">
+                            <i class="fas fa-upload"></i> App Icon Yükle
+                        </button>
+                    </form>
+                    
+                    <div id="appIconResult" class="mt-3" style="display: none;"></div>
+                    
+                    <div class="mt-3">
+                        <div class="alert alert-info">
+                            <i class="fas fa-lightbulb"></i> 
+                            <strong>Not:</strong> App icon değişikliği uygulamanın yeniden yüklenmesi gerektirebilir.
+                        </div>
+                    </div>
+                </div>
+            </div>
+            
+            <div class="card mb-4">
+                <div class="card-header">
+                    <h5><i class="fas fa-sign-in-alt"></i> Login Logo</h5>
+                </div>
+                <div class="card-body">
+                    {% if current_login_logo and current_login_logo.value %}
+                        <div class="text-center mb-3">
+                            <img src="{{ url_for('static', filename='uploads/' + current_login_logo.value) }}" 
+                                 alt="Mevcut Login Logo" 
+                                 class="img-fluid" 
+                                 style="max-height: 120px; max-width: 120px; border-radius: 20px; box-shadow: 0 4px 12px rgba(0,0,0,0.15);">
+                            <p class="text-muted mt-2">Mevcut Login Logo</p>
+                        </div>
+                    {% else %}
+                        <div class="text-center mb-3">
+                            <div class="d-inline-flex align-items-center justify-content-center" 
+                                 style="width: 120px; height: 120px; background: linear-gradient(135deg, #8B4513, #D2691E); border-radius: 20px;">
+                                <i class="fas fa-coffee fa-3x text-white"></i>
+                            </div>
+                            <p class="text-muted mt-2">Varsayılan Login Logo</p>
+                        </div>
+                    {% endif %}
+                    
+                    <form id="loginLogoForm" enctype="multipart/form-data">
+                        <div class="mb-3">
+                            <label for="loginLogoFile" class="form-label">Yeni Login Logo Yükle</label>
+                            <input type="file" class="form-control" id="loginLogoFile" name="login_logo" accept="image/*" required>
+                            <div class="form-text">
+                                <strong>Önerilen:</strong> 512x512px PNG formatı. Maksimum 16MB.<br>
+                                <small class="text-info">
+                                    <i class="fas fa-info-circle"></i> Bu logo mobil uygulamanın giriş ekranında görünecek.
+                                </small>
+                            </div>
+                        </div>
+                        <button type="submit" class="btn btn-primary w-100">
+                            <i class="fas fa-upload"></i> Login Logo Yükle
+                        </button>
+                    </form>
+                    
+                    <div id="loginLogoResult" class="mt-3" style="display: none;"></div>
+                </div>
+            </div>
+            
+            <div class="card mb-4">
+                <div class="card-header">
+                    <h5><i class="fas fa-poll"></i> Anket Yönetimi</h5>
+                </div>
+                <div class="card-body">
+                    <form id="survey-form">
+                        <div class="mb-3">
+                            <label for="survey_title" class="form-label">Anket Başlığı</label>
+                            <input type="text" class="form-control" id="survey_title" required>
+                        </div>
+                        <div class="mb-3">
+                            <label for="survey_description" class="form-label">Anket Açıklaması</label>
+                            <textarea class="form-control" id="survey_description" rows="3" required></textarea>
+                        </div>
+                        <div class="row">
+                            <div class="col-6">
+                                <label for="survey_start_date" class="form-label">Başlangıç Tarihi</label>
+                                <input type="datetime-local" class="form-control" id="survey_start_date" required>
+                            </div>
+                            <div class="col-6">
+                                <label for="survey_end_date" class="form-label">Bitiş Tarihi</label>
+                                <input type="datetime-local" class="form-control" id="survey_end_date" required>
+                            </div>
+                        </div>
+                        
+                        <!-- Survey Questions -->
+                        <div class="mb-3 mt-3">
+                            <label class="form-label">Anket Soruları</label>
+                            <div id="survey-questions">
+                                <div class="question-item border rounded p-3 mb-3">
+                                    <div class="row">
+                                        <div class="col-8">
+                                            <input type="text" class="form-control question-text" placeholder="Soru metni" required>
+                                        </div>
+                                        <div class="col-3">
+                                            <select class="form-select question-type">
+                                                <option value="rating">Puanlama (1-5)</option>
+                                                <option value="text">Metin</option>
+                                                <option value="multiple_choice">Çoktan Seçmeli</option>
+                                                <option value="yes_no">Evet/Hayır</option>
+                                            </select>
+                                        </div>
+                                        <div class="col-1">
+                                            <button type="button" class="btn btn-outline-danger btn-sm remove-question" disabled>
+                                                <i class="fas fa-trash"></i>
+                                            </button>
+                                        </div>
+                                    </div>
+                                    <div class="options-container mt-2" style="display: none;">
+                                        <label class="form-label">Seçenekler (her satıra bir seçenek)</label>
+                                        <textarea class="form-control question-options" rows="3" placeholder="Seçenek 1&#10;Seçenek 2&#10;Seçenek 3"></textarea>
+                                    </div>
+                                </div>
+                            </div>
+                            <button type="button" class="btn btn-outline-primary btn-sm" id="add-question">
+                                <i class="fas fa-plus"></i> Soru Ekle
+                            </button>
+                        </div>
+                        
+                        <div class="form-check mb-3">
+                            <input class="form-check-input" type="checkbox" id="survey_is_active" checked>
+                            <label class="form-check-label" for="survey_is_active">
+                                Anket Aktif
+                            </label>
+                        </div>
+                        
+                        <button type="submit" class="btn btn-success">
+                            <i class="fas fa-plus"></i> Anket Oluştur
+                        </button>
+                    </form>
+                    
+                    <div id="survey-result" class="mt-3" style="display: none;"></div>
+                    
+                    <hr class="my-4">
+                    
+                    <h6><i class="fas fa-list"></i> Mevcut Anketler</h6>
+                    <div id="surveys-list">
+                        <div class="table-responsive">
+                            <table class="table table-sm" id="surveys-table">
+                                <thead>
+                                    <tr>
+                                        <th>Anket</th>
+                                        <th>Tarih</th>
+                                        <th>Durum</th>
+                                        <th>Yanıt</th>
+                                        <th>İşlem</th>
+                                    </tr>
+                                </thead>
+                                <tbody>
+                                    <!-- Surveys will be loaded here -->
+                                </tbody>
+                            </table>
+                        </div>
+                    </div>
+                </div>
+            </div>
+            
+            <div class="card mb-4">
+                <div class="card-header">
+                    <h5><i class="fas fa-tags"></i> Kampanya Yönetimi</h5>
+                </div>
+                <div class="card-body">
+                    <form id="campaign-form" enctype="multipart/form-data">
+                        <div class="mb-3">
+                            <label for="campaign_title" class="form-label">Kampanya Başlığı</label>
+                            <input type="text" class="form-control" id="campaign_title" required>
+                        </div>
+                        <div class="mb-3">
+                            <label for="campaign_description" class="form-label">Açıklama</label>
+                            <textarea class="form-control" id="campaign_description" rows="3" required></textarea>
+                        </div>
+                        <div class="mb-3">
+                            <label for="campaign_image" class="form-label">Kampanya Görseli</label>
+                            <input type="file" class="form-control" id="campaign_image" accept="image/*">
+                        </div>
+                        <div class="row">
+                            <div class="col-6">
+                                <label for="start_date" class="form-label">Başlangıç Tarihi</label>
+                                <input type="datetime-local" class="form-control" id="start_date" required>
+                            </div>
+                            <div class="col-6">
+                                <label for="end_date" class="form-label">Bitiş Tarihi</label>
+                                <input type="datetime-local" class="form-control" id="end_date" required>
+                            </div>
+                        </div>
+                        <div class="mb-3 mt-3">
+                            <label class="form-label">Geçerli Şubeler</label>
+                            <div class="form-check">
+                                <input class="form-check-input" type="checkbox" id="select_all_branches">
+                                <label class="form-check-label fw-bold" for="select_all_branches">
+                                    Tüm Şubeleri Seç
+                                </label>
+                            </div>
+                            <hr>
+                            <div id="branches-list">
+                                {% for branch in branches %}
+                                <div class="form-check">
+                                    <input class="form-check-input branch-checkbox" type="checkbox" name="branches" value="{{ branch.id }}" id="branch_{{ branch.id }}">
+                                    <label class="form-check-label" for="branch_{{ branch.id }}">
+                                        {{ branch.name }}
+                                        {% if branch.address %}
+                                        <small class="text-muted">- {{ branch.address }}</small>
+                                        {% endif %}
+                                    </label>
+                                </div>
+                                {% endfor %}
+                            </div>
+                        </div>
+                        
+                        <!-- Kampanya Ürünleri Seçimi -->
+                        <div class="mb-3 mt-3">
+                            <label class="form-label">Kampanya Ürünleri</label>
+                            <small class="text-muted d-block mb-2">Bu kampanyada indirimli olacak ürünleri seçin</small>
+                            <div class="form-check">
+                                <input class="form-check-input" type="checkbox" id="select_all_products">
+                                <label class="form-check-label fw-bold" for="select_all_products">
+                                    Tüm Ürünleri Seç
+                                </label>
+                            </div>
+                            <hr>
+                            <div id="products-list" style="max-height: 300px; overflow-y: auto;">
+                                {% for product in products %}
+                                <div class="row align-items-center mb-2 p-2 border rounded">
+                                    <div class="col-1">
+                                        <input class="form-check-input product-checkbox" type="checkbox" 
+                                               name="products" value="{{ product.id }}" id="product_{{ product.id }}">
+                                    </div>
+                                    <div class="col-3">
+                                        <label class="form-check-label fw-bold" for="product_{{ product.id }}">
+                                            {{ product.name }}
+                                        </label>
+                                        {% if product.description %}
+                                        <small class="text-muted d-block">{{ product.description[:50] }}{% if product.description|length > 50 %}...{% endif %}</small>
+                                        {% endif %}
+                                    </div>
+                                    <div class="col-2">
+                                        <small class="text-primary">{{ product.points_required }} Puan</small>
+                                    </div>
+                                    <div class="col-3">
+                                        <div class="input-group input-group-sm">
+                                            <input type="number" class="form-control discount-input" 
+                                                   id="discount_{{ product.id }}" 
+                                                   placeholder="İndirim" min="1" max="100" disabled>
+                                            <select class="form-select discount-type" id="discount_type_{{ product.id }}" disabled>
+                                                <option value="percentage">%</option>
+                                                <option value="fixed">TL</option>
+                                            </select>
+                                        </div>
+                                    </div>
+                                    <div class="col-3">
+                                        {% if product.image_filename %}
+                                        <img src="{{ url_for('static', filename='uploads/' + product.image_filename) }}" 
+                                             class="img-thumbnail" style="width: 40px; height: 40px; object-fit: cover;">
+                                        {% else %}
+                                        <div class="bg-light rounded d-flex align-items-center justify-content-center" 
+                                             style="width: 40px; height: 40px;">
+                                            <i class="fas fa-image text-muted"></i>
+                                        </div>
+                                        {% endif %}
+                                    </div>
+                                </div>
+                                {% endfor %}
+                            </div>
+                        </div>
+                        
+                        <!-- QR Kod Ayarları -->
+                        <div class="mb-3 mt-3">
+                            <label class="form-label">QR Kod Ayarları</label>
+                            <div class="form-check form-switch">
+                                <input class="form-check-input" type="checkbox" id="qr_enabled" checked>
+                                <label class="form-check-label" for="qr_enabled">
+                                    QR Kod Oluşturmaya İzin Ver
+                                </label>
+                            </div>
+                            <div class="row mt-2" id="qr-settings">
+                                <div class="col-6">
+                                    <label for="max_usage_per_customer" class="form-label">Müşteri Başına Kullanım Limiti</label>
+                                    <input type="number" class="form-control" id="max_usage_per_customer" 
+                                           value="1" min="1" max="10">
+                                    <small class="text-muted">Bir müşteri bu kampanyayı kaç kez kullanabilir</small>
+                                </div>
+                                <div class="col-6">
+                                    <label for="total_usage_limit" class="form-label">Toplam Kullanım Limiti</label>
+                                    <input type="number" class="form-control" id="total_usage_limit" 
+                                           value="100" min="1">
+                                    <small class="text-muted">Kampanya toplam kaç kez kullanılabilir</small>
+                                </div>
+                            </div>
+                        </div>
+                        
+                        <button type="submit" class="btn btn-success mt-3">
+                            <i class="fas fa-plus"></i> Kampanya Oluştur
+                        </button>
+                    </form>
+                    
+                    <div id="campaign-result" class="mt-3" style="display: none;"></div>
+                    
+                    <hr class="my-4">
+                    
+                    <h6><i class="fas fa-list"></i> Mevcut Kampanyalar</h6>
+                    <div id="campaigns-list">
+                        {% if campaigns %}
+                            <div class="table-responsive">
+                                <table class="table table-sm">
+                                    <thead>
+                                        <tr>
+                                            <th>Kampanya</th>
+                                            <th>Tarih</th>
+                                            <th>Durum</th>
+                                            <th>İşlem</th>
+                                        </tr>
+                                    </thead>
+                                    <tbody>
+                                        {% for campaign in campaigns %}
+                                        <tr>
+                                            <td>
+                                                <div class="d-flex align-items-center">
+                                                    {% if campaign.image_filename %}
+                                                    <img src="{{ url_for('static', filename='uploads/' + campaign.image_filename) }}" 
+                                                         alt="{{ campaign.title }}" 
+                                                         class="me-2" 
+                                                         style="width: 40px; height: 40px; object-fit: cover; border-radius: 5px;">
+                                                    {% else %}
+                                                    <div class="me-2 bg-light d-flex align-items-center justify-content-center" 
+                                                         style="width: 40px; height: 40px; border-radius: 5px;">
+                                                        <i class="fas fa-image text-muted"></i>
+                                                    </div>
+                                                    {% endif %}
+                                                    <div>
+                                                        <strong>{{ campaign.title }}</strong>
+                                                        <br><small class="text-muted">{{ campaign.description[:50] }}{% if campaign.description|length > 50 %}...{% endif %}</small>
+                                                    </div>
+                                                </div>
+                                            </td>
+                                            <td>
+                                                <small>
+                                                    {{ campaign.start_date.strftime('%d.%m.%Y') }}<br>
+                                                    {{ campaign.end_date.strftime('%d.%m.%Y') }}
+                                                </small>
+                                            </td>
+                                            <td>
+                                                {% if campaign.is_valid() %}
+                                                    <span class="badge bg-success">Aktif</span>
+                                                {% elif campaign.is_active %}
+                                                    <span class="badge bg-warning">Beklemede</span>
+                                                {% else %}
+                                                    <span class="badge bg-danger">Pasif</span>
+                                                {% endif %}
+                                            </td>
+                                            <td>
+                                                <div class="btn-group btn-group-sm">
+                                                    <button class="btn btn-outline-primary btn-sm" onclick="editCampaign({{ campaign.id }})" title="Düzenle">
+                                                        <i class="fas fa-edit"></i>
+                                                    </button>
+                                                    <button class="btn btn-outline-warning btn-sm" onclick="manageCampaignQR({{ campaign.id }})" title="QR Yönetimi">
+                                                        <i class="fas fa-qrcode"></i>
+                                                    </button>
+                                                    <button class="btn btn-outline-{{ 'danger' if campaign.is_active else 'success' }} btn-sm" 
+                                                            onclick="toggleCampaign({{ campaign.id }}, {{ campaign.is_active|tojson }})" title="{{ 'Pasif Yap' if campaign.is_active else 'Aktif Yap' }}">
+                                                        <i class="fas fa-{{ 'times' if campaign.is_active else 'check' }}"></i>
+                                                    </button>
+                                                    <button class="btn btn-outline-danger btn-sm" onclick="deleteCampaign({{ campaign.id }})" title="Sil">
+                                                        <i class="fas fa-trash"></i>
+                                                    </button>
+                                                </div>
+                                            </td>
+                                        </tr>
+                                        {% endfor %}
+                                    </tbody>
+                                </table>
+                            </div>
+                        {% else %}
+                            <p class="text-muted">Henüz kampanya oluşturulmamış.</p>
+                        {% endif %}
+                    </div>
+                </div>
+            </div>
+        </div>
+        
+        <div class="col-md-4">
+            <div class="card mb-4">
+                <div class="card-header">
+                    <h5><i class="fas fa-store"></i> Şube Oluştur</h5>
+                </div>
+                <div class="card-body">
+                    <form id="branch-form" enctype="multipart/form-data">
+                        <div class="mb-3">
+                            <label for="branch_name" class="form-label">Şube Adı</label>
+                            <input type="text" class="form-control" id="branch_name" required>
+                        </div>
+                        <div class="mb-3">
+                            <label for="branch_address" class="form-label">Adres</label>
+                            <textarea class="form-control" id="branch_address" rows="2"></textarea>
+                        </div>
+                        <div class="mb-3">
+                            <label for="branch_phone" class="form-label">Telefon</label>
+                            <input type="tel" class="form-control" id="branch_phone">
+                        </div>
+                        <div class="mb-3">
+                            <label for="branch_email" class="form-label">E-posta</label>
+                            <input type="email" class="form-control" id="branch_email" required>
+                        </div>
+                        <div class="mb-3">
+                            <label for="branch_password" class="form-label">Şifre</label>
+                            <input type="password" class="form-control" id="branch_password" required>
+                        </div>
+                        <div class="mb-3">
+                            <label for="working_hours" class="form-label">Çalışma Saatleri</label>
+                            <input type="text" class="form-control" id="working_hours" placeholder="Örn: 08:00 - 22:00">
+                        </div>
+                        <div class="mb-3">
+                            <label for="branch_image" class="form-label">Şube Görseli</label>
+                            <input type="file" class="form-control" id="branch_image" accept="image/*">
+                            <div class="form-text">PNG, JPG, JPEG formatları desteklenir. Maksimum 16MB.</div>
+                        </div>
+                        <button type="submit" class="btn btn-warning">
+                            <i class="fas fa-plus"></i> Şube Oluştur
+                        </button>
+                    </form>
+                    
+                    <div id="branch-result" class="mt-3" style="display: none;"></div>
+                    
+                    <hr class="my-4">
+                    
+                    <h6><i class="fas fa-list"></i> Mevcut Şubeler</h6>
+                    <div class="table-responsive">
+                        <table class="table table-sm">
+                            <thead>
+                                <tr>
+                                    <th>Şube</th>
+                                    <th>Durum</th>
+                                    <th>İşlem</th>
+                                </tr>
+                            </thead>
+                            <tbody>
+                                {% for branch in branches %}
+                                <tr>
+                                    <td>
+                                        <strong>{{ branch.name }}</strong><br>
+                                        <small class="text-muted">{{ branch.address[:30] }}{% if branch.address|length > 30 %}...{% endif %}</small>
+                                    </td>
+                                    <td>
+                                        {% if branch.is_active %}
+                                            <span class="badge bg-success">Aktif</span>
+                                        {% else %}
+                                            <span class="badge bg-danger">Pasif</span>
+                                        {% endif %}
+                                    </td>
+                                    <td>
+                                        <div class="btn-group btn-group-sm">
+                                            <button class="btn btn-outline-primary btn-sm" onclick="editBranch({{ branch.id }})">
+                                                <i class="fas fa-edit"></i>
+                                            </button>
+                                            <button class="btn btn-outline-{{ 'danger' if branch.is_active else 'success' }} btn-sm" 
+                                                    onclick="toggleBranch({{ branch.id }}, {{ branch.is_active|lower }})">
+                                                <i class="fas fa-{{ 'times' if branch.is_active else 'check' }}"></i>
+                                            </button>
+                                        </div>
+                                    </td>
+                                </tr>
+                                {% endfor %}
+                            </tbody>
+                        </table>
+                    </div>
+                    </form>
+                </div>
+            </div>
+        </div>
+        
+        <div class="col-md-4">
+            <div class="card mb-4">
+                <div class="card-header">
+                    <h5><i class="fas fa-plus"></i> Ürün Ekle</h5>
+                </div>
+                <div class="card-body">
+                    <form id="product-form" enctype="multipart/form-data">
+                        <div class="mb-3">
+                            <label for="product_name" class="form-label">Ürün Adı</label>
+                            <input type="text" class="form-control" id="product_name" required>
+                        </div>
+                        <div class="mb-3">
+                            <label for="product_description" class="form-label">Açıklama</label>
+                            <textarea class="form-control" id="product_description" rows="2"></textarea>
+                        </div>
+                        <div class="mb-3">
+                            <label for="product_points" class="form-label">Gerekli Puan</label>
+                            <input type="number" class="form-control" id="product_points" min="1" required>
+                        </div>
+                        <div class="mb-3">
+                            <label for="product_category" class="form-label">Kategori</label>
+                            <select class="form-control" id="product_category" required>
+                                <option value="">Kategori Seçin</option>
+                                <option value="İçecekler">İçecekler</option>
+                                <option value="Tatlılar">Tatlılar</option>
+                                <option value="Atıştırmalık">Atıştırmalık</option>
+                                <option value="Kahvaltı">Kahvaltı</option>
+                                <option value="Ana Yemek">Ana Yemek</option>
+                                <option value="Genel">Genel</option>
+                            </select>
+                        </div>
+                        <div class="mb-3">
+                            <label for="product_image" class="form-label">Ürün Resmi</label>
+                            <input type="file" class="form-control" id="product_image" accept="image/*">
+                            <div class="form-text">PNG, JPG, JPEG veya GIF formatında olmalı (Max: 16MB)</div>
+                        </div>
+                        <button type="submit" class="btn btn-success">
+                            <i class="fas fa-plus"></i> Ürün Ekle
+                        </button>
+                    </form>
+                    
+                    <hr class="my-4">
+                    <h6><i class="fas fa-list"></i> Mevcut Ürünler</h6>
+                    <div class="table-responsive">
+                        <table class="table table-sm align-middle">
+                            <thead>
+                                <tr>
+                                    <th>Ürün</th>
+                                    <th>Kategori</th>
+                                    <th>Puan</th>
+                                    <th>Durum</th>
+                                    <th>İşlem</th>
+                                </tr>
+                            </thead>
+                            <tbody>
+                                {% for p in products %}
+                                <tr>
+                                    <td>
+                                        <div class="d-flex align-items-center">
+                                            {% if p.image_filename %}
+                                            <img src="{{ url_for('static', filename='uploads/' + p.image_filename) }}" class="me-2" style="width: 36px; height: 36px; object-fit: cover; border-radius: 6px;">
+                                            {% else %}
+                                            <div class="me-2 bg-light d-flex align-items-center justify-content-center" style="width: 36px; height: 36px; border-radius: 6px;">
+                                                <i class="fas fa-image text-muted"></i>
+                                            </div>
+                                            {% endif %}
+                                            <div>
+                                                <strong>{{ p.name }}</strong>
+                                                {% if p.description %}
+                                                <br><small class="text-muted">{{ p.description[:50] }}{% if p.description|length > 50 %}...{% endif %}</small>
+                                                {% endif %}
+                                            </div>
+                                        </div>
+                                    </td>
+                                    <td><small>{{ p.category or 'Genel' }}</small></td>
+                                    <td><small class="text-primary">{{ p.points_required }} Puan</small></td>
+                                    <td>
+                                        {% if p.is_active %}
+                                            <span class="badge bg-success">Aktif</span>
+                                        {% else %}
+                                            <span class="badge bg-danger">Pasif</span>
+                                        {% endif %}
+                                    </td>
+                                    <td>
+                                        <div class="btn-group btn-group-sm">
+                                            <button type="button" class="btn btn-outline-primary btn-sm" onclick="editProduct({{ p.id }})" title="Düzenle">
+                                                <i class="fas fa-edit"></i>
+                                            </button>
+                                            <button type="button" class="btn btn-outline-{{ 'danger' if p.is_active else 'success' }} btn-sm" onclick="toggleProduct({{ p.id }})" title="{{ 'Pasif Yap' if p.is_active else 'Aktif Yap' }}">
+                                                <i class="fas fa-{{ 'times' if p.is_active else 'check' }}"></i>
+                                            </button>
+                                            <button type="button" class="btn btn-outline-danger btn-sm" onclick="deleteProduct({{ p.id }})" title="Sil">
+                                                <i class="fas fa-trash"></i>
+                                            </button>
+                                            <button type="button" class="btn btn-danger btn-sm" onclick="hardDeleteProduct({{ p.id }})" title="Kalıcı Sil">
+                                                <i class="fas fa-trash-alt"></i>
+                                            </button>
+                                        </div>
+                                    </td>
+                                </tr>
+                                {% endfor %}
+                            </tbody>
+                        </table>
+                    </div>
+                </div>
+            </div>
+        </div>
+        
+        <div class="col-md-4">
+            <div class="card mb-4">
+                <div class="card-header">
+                    <h5><i class="fas fa-tags"></i> Kategori Yönetimi</h5>
+                </div>
+                <div class="card-body">
+                    <form id="category-form">
+                        <div class="mb-3">
+                            <label for="category_name" class="form-label">Yeni Kategori</label>
+                            <input type="text" class="form-control" id="category_name" placeholder="Kategori adı girin" required>
+                        </div>
+                        <button type="submit" class="btn btn-primary">
+                            <i class="fas fa-plus"></i> Kategori Ekle
+                        </button>
+                    </form>
+                    
+                    <hr>
+                    
+                    <h6>Mevcut Kategoriler:</h6>
+                    <div id="categories-list" class="mt-2">
+                        <!-- Kategoriler buraya yüklenecek -->
+                    </div>
+                    
+                    <div id="category-result" class="mt-3"></div>
+                </div>
+            </div>
+        </div>
+        
+        <div class="col-md-4">
+            <div class="card mb-4">
+                <div class="card-header">
+                    <h5><i class="fas fa-chart-bar"></i> Raporlama</h5>
+                </div>
+                <div class="card-body">
+                    <div class="d-grid gap-2">
+                        <a href="{{ url_for('reports') }}" class="btn btn-info">
+                            <i class="fas fa-chart-line"></i> Detaylı Raporlar
+                        </a>
+                        <a href="{{ url_for('admin_send_message') }}" class="btn btn-warning">
+                            <i class="fas fa-paper-plane"></i> Müşterilere Mesaj Gönder
+                        </a>
+                        <button class="btn btn-outline-info" onclick="showQuickReport('daily')">
+                            <i class="fas fa-calendar-day"></i> Günlük Özet
+                        </button>
+                        <button class="btn btn-outline-info" onclick="showQuickReport('weekly')">
+                            <i class="fas fa-calendar-week"></i> Haftalık Özet
+                        </button>
+                        <button class="btn btn-outline-info" onclick="showQuickReport('monthly')">
+                            <i class="fas fa-calendar-alt"></i> Aylık Özet
+                        </button>
+                    </div>
+                </div>
+            </div>
+            
+            <div class="card mb-4">
+                <div class="card-header">
+                    <h5><i class="fas fa-qrcode"></i> Son Müşteri QR Kodları</h5>
+                </div>
+                <div class="card-body">
+                    {% if customer_qrs %}
+                        <div class="table-responsive">
+                            <table class="table table-sm">
+                                <thead>
+                                    <tr>
+                                        <th>Müşteri</th>
+                                        <th>QR Kod</th>
+                                        <th>Puan</th>
+                                        <th>Durum</th>
+                                    </tr>
+                                </thead>
+                                <tbody>
+                                    {% for qr in customer_qrs %}
+                                    <tr>
+                                        <td>{{ qr.customer.name }}</td>
+                                        <td><code>{{ qr.code[:15] }}...</code></td>
+                                        <td>{{ qr.points_earned }}</td>
+                                        <td>
+                                            {% if qr.is_used %}
+                                                <span class="badge bg-success">Kullanıldı</span>
+                                            {% else %}
+                                                <span class="badge bg-warning">Bekliyor</span>
+                                            {% endif %}
+                                        </td>
+                                    </tr>
+                                    {% endfor %}
+                                </tbody>
+                            </table>
+                        </div>
+                    {% else %}
+                        <p class="text-muted">Henüz müşteri QR kodu oluşturulmamış.</p>
+                    {% endif %}
+                </div>
+            </div>
+        </div>
+    </div>
+    
+    <div class="row">
+        <div class="col-md-4">
+            <div class="card">
+                <div class="card-header">
+                    <h5><i class="fas fa-store"></i> Şubeler</h5>
+                </div>
+                <div class="card-body">
+                    {% if branches %}
+                        <div class="table-responsive">
+                            <table class="table table-sm">
+                                <thead>
+                                    <tr>
+                                        <th>Şube</th>
+                                        <th>E-posta</th>
+                                        <th>Durum</th>
+                                        <th>İşlem</th>
+                                    </tr>
+                                </thead>
+                                <tbody>
+                                    {% for branch in branches %}
+                                    <tr>
+                                        <td>
+                                            <strong>{{ branch.name }}</strong>
+                                            {% if branch.address %}
+                                                <br><small class="text-muted">{{ branch.address[:30] }}...</small>
+                                            {% endif %}
+                                        </td>
+                                        <td>{{ branch.email }}</td>
+                                        <td>
+                                            {% if branch.is_active %}
+                                                <span class="badge bg-success">Aktif</span>
+                                            {% else %}
+                                                <span class="badge bg-danger">Pasif</span>
+                                            {% endif %}
+                                        </td>
+                                        <td>
+                                            <button class="btn btn-sm btn-outline-warning" 
+                                                    onclick="toggleBranch({{ branch.id }})">
+                                                {% if branch.is_active %}
+                                                    <i class="fas fa-pause"></i>
+                                                {% else %}
+                                                    <i class="fas fa-play"></i>
+                                                {% endif %}
+                                            </button>
+                                        </td>
+                                    </tr>
+                                    {% endfor %}
+                                </tbody>
+                            </table>
+                        </div>
+                    {% else %}
+                        <p class="text-muted">Henüz şube oluşturulmamış.</p>
+                    {% endif %}
+                </div>
+            </div>
+        </div>
+        
+        <div class="col-md-6">
+            <div class="card">
+                <div class="card-header">
+                    <h5><i class="fas fa-box"></i> Ürünler</h5>
+                </div>
+                <div class="card-body">
+                    {% if products %}
+                        <div class="table-responsive">
+                            <table class="table table-sm">
+                                <thead>
+                                    <tr>
+                                        <th>Ürün</th>
+                                        <th>Puan</th>
+                                        <th>Durum</th>
+                                        <th>İşlem</th>
+                                    </tr>
+                                </thead>
+                                <tbody>
+                                    {% for product in products %}
+                                    <tr>
+                                        <td>
+                                            <div class="d-flex align-items-center">
+                                                {% if product.image_filename %}
+                                                <img src="{{ url_for('static', filename='uploads/' + product.image_filename) }}" 
+                                                     alt="{{ product.name }}" 
+                                                     class="me-2" 
+                                                     style="width: 40px; height: 40px; object-fit: cover; border-radius: 5px;">
+                                                {% else %}
+                                                <div class="me-2 bg-light d-flex align-items-center justify-content-center" 
+                                                     style="width: 40px; height: 40px; border-radius: 5px;">
+                                                    <i class="fas fa-image text-muted"></i>
+                                                </div>
+                                                {% endif %}
+                                                <div>
+                                                    <strong>{{ product.name }}</strong>
+                                                    {% if product.description %}
+                                                    <br><small class="text-muted">{{ product.description }}</small>
+                                                    {% endif %}
+                                                </div>
+                                            </div>
+                                        </td>
+                                        <td><span class="badge bg-primary">{{ product.points_required }}</span></td>
+                                        <td>
+                                            {% if product.is_active %}
+                                                <span class="badge bg-success">Aktif</span>
+                                            {% else %}
+                                                <span class="badge bg-danger">Pasif</span>
+                                            {% endif %}
+                                        </td>
+                                        <td>
+                                            <button class="btn btn-sm btn-outline-warning" onclick="toggleProduct({{ product.id }})">
+                                                {% if product.is_active %}Pasif Yap{% else %}Aktif Yap{% endif %}
+                                            </button>
+                                        </td>
+                                    </tr>
+                                    {% endfor %}
+                                </tbody>
+                            </table>
+                        </div>
+                    {% else %}
+                        <p class="text-muted">Henüz ürün eklenmemiş.</p>
+                    {% endif %}
+                </div>
+            </div>
+        </div>
+        
+        <div class="col-md-6">
+            <div class="card">
+                <div class="card-header">
+                    <h5><i class="fas fa-users"></i> Kullanıcılar</h5>
+                </div>
+                <div class="card-body">
+                    <form class="row gy-2 gx-2 align-items-end mb-3" method="get" action="{{ url_for('admin') }}">
+                        <div class="col-md-4">
+                            <label class="form-label mb-0">Ara (Ad/E-posta)</label>
+                            <input type="text" class="form-control" name="q" value="{{ q or '' }}" placeholder="Ara...">
+                        </div>
+                        <div class="col-md-3">
+                            <label class="form-label mb-0">Sırala</label>
+                            <div class="input-group">
+                                <select class="form-select" name="sort">
+                                    <option value="created_at" {% if sort=='created_at' %}selected{% endif %}>Oluşturulma</option>
+                                    <option value="name" {% if sort=='name' %}selected{% endif %}>Ad</option>
+                                    <option value="email" {% if sort=='email' %}selected{% endif %}>E-posta</option>
+                                    <option value="points" {% if sort=='points' %}selected{% endif %}>Puan</option>
+                                </select>
+                                <select class="form-select" name="order" style="max-width:110px;">
+                                    <option value="asc" {% if order=='asc' %}selected{% endif %}>Artan</option>
+                                    <option value="desc" {% if order=='desc' %}selected{% endif %}>Azalan</option>
+                                </select>
+                            </div>
+                        </div>
+                        <div class="col-md-2">
+                            <label class="form-label mb-0">Sayfa Başına</label>
+                            <select class="form-select" name="per_page">
+                                <option value="10" {% if per_page==10 %}selected{% endif %}>10</option>
+                                <option value="20" {% if per_page==20 %}selected{% endif %}>20</option>
+                                <option value="50" {% if per_page==50 %}selected{% endif %}>50</option>
+                            </select>
+                        </div>
+                        <div class="col-md-3 d-flex gap-2">
+                            <button type="submit" class="btn btn-primary flex-grow-1"><i class="fas fa-search"></i> Uygula</button>
+                            <a class="btn btn-secondary" href="{{ url_for('admin') }}">Temizle</a>
+                        </div>
+                    </form>
+                    <p class="mb-2"><strong>Toplam:</strong> {{ users_total }} | <strong>Sayfa:</strong> {{ users_page.page }}/{{ users_page.pages }}</p>
+                    <div class="table-responsive">
+                        <table class="table table-sm">
+                            <thead>
+                                <tr>
+                                    <th>Ad</th>
+                                    <th>E-posta</th>
+                                    <th>Puan</th>
+                                </tr>
+                            </thead>
+                            <tbody>
+                                {% for user in users %}
+                                <tr>
+                                    <td>{{ user.name }}</td>
+                                    <td>{{ user.email }}</td>
+                                    <td><span class="badge bg-primary">{{ user.points }}</span></td>
+                                </tr>
+                                {% endfor %}
+                            </tbody>
+                        </table>
+                    </div>
+                    {% if users_page.pages > 1 %}
+                    <nav aria-label="Kullanıcılar sayfalama" class="mt-2">
+                        <ul class="pagination pagination-sm mb-0">
+                            <li class="page-item {% if not users_page.has_prev %}disabled{% endif %}">
+                                <a class="page-link" href="{{ url_for('admin', page=users_page.prev_num, q=q, sort=sort, order=order, per_page=per_page) }}" tabindex="-1">Önceki</a>
+                            </li>
+                            {% for p in range(1, users_page.pages + 1) %}
+                            <li class="page-item {% if p == users_page.page %}active{% endif %}">
+                                <a class="page-link" href="{{ url_for('admin', page=p, q=q, sort=sort, order=order, per_page=per_page) }}">{{ p }}</a>
+                            </li>
+                            {% endfor %}
+                            <li class="page-item {% if not users_page.has_next %}disabled{% endif %}">
+                                <a class="page-link" href="{{ url_for('admin', page=users_page.next_num, q=q, sort=sort, order=order, per_page=per_page) }}">Sonraki</a>
+                            </li>
+                        </ul>
+                    </nav>
+                    {% endif %}
+                </div>
+            </div>
+        </div>
+        
+        <div class="col-md-4">
+            <div class="card">
+                <div class="card-header">
+                    <h5><i class="fas fa-history"></i> Son İşlemler</h5>
+                </div>
+                <div class="card-body">
+                    <div class="table-responsive">
+                        <table class="table table-sm">
+                            <thead>
+                                <tr>
+                                    <th>Kullanıcı</th>
+                                    <th>Tip</th>
+                                    <th>Tutar</th>
+                                    <th>Tarih</th>
+                                </tr>
+                            </thead>
+                            <tbody>
+                                {% for transaction in transactions %}
+                                <tr>
+                                    <td>{{ transaction.user.name }}</td>
+                                    <td>
+                                        {% if transaction.transaction_type == 'purchase' %}
+                                            <span class="badge bg-success">Alışveriş</span>
+                                        {% else %}
+                                            <span class="badge bg-warning">Puan Kullanım</span>
+                                        {% endif %}
+                                    </td>
+                                    <td>{{ "%.2f"|format(transaction.amount) }} ₺</td>
+                                    <td>{{ transaction.timestamp.strftime('%d.%m %H:%M') }}</td>
+                                </tr>
+                                {% endfor %}
+                            </tbody>
+                        </table>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- Kampanya QR Yönetimi Modal -->
+<div class="modal fade" id="campaignQRModal" tabindex="-1" aria-labelledby="campaignQRModalLabel" aria-hidden="true">
+    <div class="modal-dialog modal-xl">
+        <div class="modal-content">
+            <div class="modal-header bg-warning text-dark">
+                <h5 class="modal-title" id="campaignQRModalLabel">
+                    <i class="fas fa-qrcode"></i> Kampanya QR Yönetimi
+                </h5>
+                <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+            </div>
+            <div class="modal-body">
+                <div id="campaignQRContent">
+                    <div class="text-center">
+                        <div class="spinner-border text-warning" role="status">
+                            <span class="visually-hidden">Yükleniyor...</span>
+                        </div>
+                        <p class="mt-2">QR veriler yükleniyor...</p>
+                    </div>
+                </div>
+            </div>
+            <div class="modal-footer">
+                <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Kapat</button>
+            </div>
+        </div>
+    </div>
+</div>
+
+{% endblock %}
+
+{% block scripts %}
+<script>
+// Şube oluşturma formu
+document.getElementById('branch-form').addEventListener('submit', function(e) {
+    e.preventDefault();
+    
+    const formData = new FormData();
+    formData.append('name', document.getElementById('branch_name').value);
+    formData.append('address', document.getElementById('branch_address').value);
+    formData.append('phone', document.getElementById('branch_phone').value);
+    formData.append('email', document.getElementById('branch_email').value);
+    formData.append('password', document.getElementById('branch_password').value);
+    
+    fetch('/admin/create_branch', {
+        method: 'POST',
+        body: formData
+    })
+    .then(response => response.json())
+    .then(data => {
+        if (data.success) {
+            alert(data.message);
+            document.getElementById('branch-form').reset();
+            location.reload();
+        } else {
+            alert('Hata: ' + data.error);
+        }
+    })
+    .catch(error => {
+        alert('Bir hata oluştu: ' + error);
+    });
+});
+
+// Ürün Yönetimi - Modal ve Fonksiyonlar (global scope)
+document.addEventListener('DOMContentLoaded', function () {
+    const modalHtml = `
+    <div class="modal fade" id="productEditModal" tabindex="-1" aria-labelledby="productEditModalLabel" aria-hidden="true">
+        <div class="modal-dialog">
+            <div class="modal-content">
+                <div class="modal-header">
+                    <h5 class="modal-title" id="productEditModalLabel"><i class="fas fa-edit"></i> Ürün Düzenle</h5>
+                    <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+                </div>
+                <div class="modal-body">
+                    <form id="productEditForm" enctype="multipart/form-data">
+                        <input type="hidden" id="edit_product_id">
+                        <div class="mb-3">
+                            <label class="form-label">Ürün Adı</label>
+                            <input type="text" class="form-control" id="edit_product_name" required>
+                        </div>
+                        <div class="mb-3">
+                            <label class="form-label">Açıklama</label>
+                            <textarea class="form-control" id="edit_product_description" rows="2"></textarea>
+                        </div>
+                        <div class="row g-2">
+                            <div class="col-6">
+                                <label class="form-label">Gerekli Puan</label>
+                                <input type="number" class="form-control" id="edit_points_required" min="1" required>
+                            </div>
+                            <div class="col-6">
+                                <label class="form-label">Kategori</label>
+                                <select class="form-select" id="edit_category_id">
+                                    <option value="">Genel</option>
+                                </select>
+                            </div>
+                        </div>
+                        <div class="mb-3 mt-2">
+                            <label class="form-label">Ürün Resmi</label>
+                            <input type="file" class="form-control" id="edit_image" accept="image/*">
+                            <div class="form-text">PNG, JPG, JPEG veya GIF (Max: 16MB)</div>
+                        </div>
+                    </form>
+                </div>
+                <div class="modal-footer">
+                    <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Kapat</button>
+                    <button type="button" class="btn btn-primary" id="saveProductChanges"><i class="fas fa-save"></i> Kaydet</button>
+                </div>
+            </div>
+        </div>
+    </div>`;
+    document.body.insertAdjacentHTML('beforeend', modalHtml);
+    document.getElementById('saveProductChanges').addEventListener('click', saveProductChanges);
+});
+
+function loadCategoriesSelect(selectedId) {
+    return fetch('/admin/categories')
+        .then(r => r.json())
+        .then(data => {
+            const sel = document.getElementById('edit_category_id');
+            if (!sel) return;
+            sel.innerHTML = '<option value="">Genel</option>';
+            if (data.categories) {
+                data.categories.forEach(cat => {
+                    const opt = document.createElement('option');
+                    opt.value = cat.id;
+                    opt.textContent = cat.name;
+                    sel.appendChild(opt);
+                });
+            }
+            if (selectedId) sel.value = selectedId;
+        });
+}
+
+function editProduct(productId) {
+    fetch(`/admin/get_product/${productId}`)
+        .then(r => r.json())
+        .then(async data => {
+            if (!data.success) { alert('Ürün bilgisi alınamadı'); return; }
+            const p = data.product;
+            document.getElementById('edit_product_id').value = p.id;
+            document.getElementById('edit_product_name').value = p.name;
+            document.getElementById('edit_product_description').value = p.description || '';
+            document.getElementById('edit_points_required').value = p.points_required;
+            await loadCategoriesSelect(p.category_id);
+            const modal = new bootstrap.Modal(document.getElementById('productEditModal'));
+            modal.show();
+        })
+        .catch(() => alert('Ürün bilgisi alınırken hata oluştu'));
+}
+
+function saveProductChanges() {
+    const id = document.getElementById('edit_product_id').value;
+    const formData = new FormData();
+    formData.append('name', document.getElementById('edit_product_name').value);
+    formData.append('description', document.getElementById('edit_product_description').value);
+    formData.append('points_required', document.getElementById('edit_points_required').value);
+    formData.append('category_id', document.getElementById('edit_category_id').value);
+    const img = document.getElementById('edit_image').files[0];
+    if (img) formData.append('image', img);
+    fetch(`/admin/update_product/${id}`, { method: 'POST', body: formData, credentials: 'same-origin' })
+        .then(r => r.json())
+        .then(data => {
+            if (data.success) {
+                alert(data.message);
+                location.reload();
+            } else {
+                alert('Hata: ' + (data.error || 'Güncelleme başarısız'));
+            }
+        })
+        .catch(() => alert('Ürün güncellenirken hata oluştu'));
+}
+
+function deleteProduct(productId) {
+    if (!confirm('Bu ürünü silmek (pasif yapmak) istediğinize emin misiniz?')) return;
+    fetch(`/admin/delete_product/${productId}`, { method: 'DELETE', credentials: 'same-origin' })
+        .then(r => r.json())
+        .then(data => {
+            if (data.success) {
+                alert(data.message);
+                location.reload();
+            } else {
+                alert('Hata: ' + (data.error || 'Silme başarısız'));
+            }
+        })
+        .catch(() => alert('Ürün silinirken hata oluştu'));
+}
+
+function hardDeleteProduct(productId) {
+    console.log('[hardDeleteProduct] Clicked for productId=', productId);
+    if (!confirm('DİKKAT: Bu ürünü veritabanından KALICI olarak silmek istediğinize emin misiniz?\n\nBu işlem geri alınamaz. İlişkili kullanım kayıtları silinecek, kampanya bağlantıları kaldırılacaktır.')) return;
+    fetch(`/admin/hard_delete_product/${productId}`, { method: 'DELETE', credentials: 'same-origin' })
+        .then(r => r.json())
+        .then(data => {
+            if (data.success) {
+                alert(data.message);
+                location.reload();
+            } else {
+                alert('Hata: ' + (data.error || 'Kalıcı silme başarısız'));
+            }
+        })
+        .catch(() => alert('Ürün kalıcı silinirken hata oluştu'));
+}
+
+function toggleProduct(productId) {
+    fetch(`/admin/toggle_product/${productId}`, { method: 'POST', credentials: 'same-origin' })
+        .then(r => r.json())
+        .then(data => {
+            if (data.success) {
+                alert(data.message);
+                location.reload();
+            } else {
+                alert('Hata: ' + (data.error || 'Durum değiştirilemedi'));
+            }
+        })
+        .catch(() => alert('Ürün durumu değiştirilirken hata oluştu'));
+}
+
+// Global export for inline onclick handlers
+window.editProduct = editProduct;
+window.saveProductChanges = saveProductChanges;
+window.deleteProduct = deleteProduct;
+window.toggleProduct = toggleProduct;
+window.hardDeleteProduct = hardDeleteProduct;
+
+// Kategori yönetimi
+function loadCategories() {
+    fetch('/admin/categories')
+    .then(response => response.json())
+    .then(data => {
+        const categoriesList = document.getElementById('categories-list');
+        categoriesList.innerHTML = '';
+        
+        if (data.categories && data.categories.length > 0) {
+            data.categories.forEach(category => {
+                const categoryItem = document.createElement('div');
+                categoryItem.className = 'category-item d-flex align-items-center justify-content-between mb-2 p-2 border rounded';
+                categoryItem.innerHTML = `
+                    <div>
+                        <span class="badge bg-secondary me-2">
+                            <i class="fas fa-tag"></i> ${category.name}
+                        </span>
+                        <small class="text-muted">${category.description || ''}</small>
+                    </div>
+                    <div class="btn-group btn-group-sm">
+                        <button class="btn btn-outline-primary btn-sm" onclick="editCategory(${category.id}, '${category.name}', '${category.description || ''}')" title="Düzenle">
+                            <i class="fas fa-edit"></i>
+                        </button>
+                        <button class="btn btn-outline-danger btn-sm" onclick="deleteCategory(${category.id}, '${category.name}')" title="Sil">
+                            <i class="fas fa-trash"></i>
+                        </button>
+                    </div>
+                `;
+                categoriesList.appendChild(categoryItem);
+            });
+        } else {
+            categoriesList.innerHTML = '<span class="text-muted">Henüz kategori eklenmemiş</span>';
+        }
+        
+        // Ürün formu kategori seçeneklerini güncelle
+        updateProductCategoryOptions(data.categories || []);
+    })
+    .catch(error => {
+        console.error('Kategoriler yüklenirken hata:', error);
+        document.getElementById('categories-list').innerHTML = '<span class="text-danger">Kategoriler yüklenemedi</span>';
+    });
+}
+
+function updateProductCategoryOptions(categories) {
+    const categorySelect = document.getElementById('product_category');
+    
+    // Mevcut seçenekleri temizle (ilk seçenek hariç)
+    while (categorySelect.children.length > 1) {
+        categorySelect.removeChild(categorySelect.lastChild);
+    }
+    
+    // Kategorileri ekle (artık API'den gelen objeler)
+    categories.forEach(category => {
+        const option = document.createElement('option');
+        option.value = category.id;
+        option.textContent = category.name;
+        categorySelect.appendChild(option);
+    });
+}
+
+// Kategori ekleme formu
+document.getElementById('category-form').addEventListener('submit', function(e) {
+    e.preventDefault();
+    console.log('Kategori ekleme formu submit edildi');
+    
+    const categoryName = document.getElementById('category_name').value.trim();
+    console.log('Kategori adı:', categoryName);
+    
+    if (!categoryName) {
+        alert('Kategori adı boş olamaz!');
+        return;
+    }
+    
+    // Backend'e kategori ekleme isteği gönder
+    const formData = new FormData();
+    formData.append('category_name', categoryName);
+    
+    fetch('/admin/add_category', {
+        method: 'POST',
+        body: formData
+    })
+    .then(response => response.json())
+    .then(data => {
+        const resultDiv = document.getElementById('category-result');
+        if (data.success) {
+            resultDiv.innerHTML = `
+                <div class="alert alert-success">
+                    <strong>Başarılı!</strong> ${data.message}
+                </div>
+            `;
+            document.getElementById('category-form').reset();
+            loadCategories(); // Kategori listesini yenile
+        } else {
+            resultDiv.innerHTML = `
+                <div class="alert alert-danger">
+                    <strong>Hata!</strong> ${data.error}
+                </div>
+            `;
+        }
+        
+        // 3 saniye sonra mesajı temizle
+        setTimeout(() => {
+            resultDiv.innerHTML = '';
+        }, 3000);
+    })
+    .catch(error => {
+        console.error('Hata:', error);
+        document.getElementById('category-result').innerHTML = `
+            <div class="alert alert-danger">
+                <strong>Hata!</strong> Kategori eklenirken bir sorun oluştu.
+            </div>
+        `;
+    });
+});
+
+// Kategori silme fonksiyonu
+function deleteCategory(categoryId, categoryName) {
+    if (!confirm(`"${categoryName}" kategorisini silmek istediğinizden emin misiniz?\n\nBu kategorideki tüm ürünler "Genel" kategorisine taşınacak.`)) {
+        return;
+    }
+    
+    const formData = new FormData();
+    formData.append('category_id', categoryId);
+    
+    fetch('/admin/delete_category', {
+        method: 'POST',
+        body: formData
+    })
+    .then(response => response.json())
+    .then(data => {
+        const resultDiv = document.getElementById('category-result');
+        if (data.success) {
+            resultDiv.innerHTML = `
+                <div class="alert alert-success">
+                    <strong>Başarılı!</strong> ${data.message}
+                </div>
+            `;
+            loadCategories(); // Kategori listesini yenile
+        } else {
+            resultDiv.innerHTML = `
+                <div class="alert alert-danger">
+                    <strong>Hata!</strong> ${data.error}
+                </div>
+            `;
+        }
+        
+        // 5 saniye sonra mesajı temizle
+        setTimeout(() => {
+            resultDiv.innerHTML = '';
+        }, 5000);
+    })
+    .catch(error => {
+        console.error('Hata:', error);
+        document.getElementById('category-result').innerHTML = `
+            <div class="alert alert-danger">
+                <strong>Hata!</strong> Kategori silinirken bir sorun oluştu.
+            </div>
+        `;
+    });
+}
+
+// Kategori düzenleme fonksiyonu
+function editCategory(categoryId, oldCategoryName, oldDescription) {
+    const newCategoryName = prompt(`"${oldCategoryName}" kategorisinin yeni adını girin:`, oldCategoryName);
+    
+    if (!newCategoryName || newCategoryName.trim() === '') {
+        return;
+    }
+    
+    if (newCategoryName.trim() === oldCategoryName) {
+        alert('Yeni kategori adı eskisiyle aynı olamaz!');
+        return;
+    }
+    
+    const newDescription = prompt(`"${newCategoryName}" kategorisinin açıklamasını girin:`, oldDescription || '');
+    
+    const formData = new FormData();
+    formData.append('category_id', categoryId);
+    formData.append('new_name', newCategoryName.trim());
+    formData.append('new_description', newDescription ? newDescription.trim() : '');
+    
+    fetch('/admin/edit_category', {
+        method: 'POST',
+        body: formData
+    })
+    .then(response => response.json())
+    .then(data => {
+        const resultDiv = document.getElementById('category-result');
+        if (data.success) {
+            resultDiv.innerHTML = `
+                <div class="alert alert-success">
+                    <strong>Başarılı!</strong> ${data.message}
+                </div>
+            `;
+            loadCategories(); // Kategori listesini yenile
+        } else {
+            resultDiv.innerHTML = `
+                <div class="alert alert-danger">
+                    <strong>Hata!</strong> ${data.error}
+                </div>
+            `;
+        }
+        
+        // 5 saniye sonra mesajı temizle
+        setTimeout(() => {
+            resultDiv.innerHTML = '';
+        }, 5000);
+    })
+    .catch(error => {
+        console.error('Hata:', error);
+        document.getElementById('category-result').innerHTML = `
+            <div class="alert alert-danger">
+                <strong>Hata!</strong> Kategori düzenlenirken bir sorun oluştu.
+            </div>
+        `;
+    });
+}
+
+// Sayfa yüklendiğinde kategorileri yükle
+document.addEventListener('DOMContentLoaded', function() {
+    console.log('Sayfa yüklendi, kategoriler yükleniyor...');
+    loadCategories();
+    
+    // Test: Kategori formu var mı kontrol et
+    const categoryForm = document.getElementById('category-form');
+    const categoryInput = document.getElementById('category_name');
+    const productSelect = document.getElementById('product_category');
+    
+    console.log('Kategori formu:', categoryForm);
+    console.log('Kategori input:', categoryInput);
+    console.log('Ürün kategori select:', productSelect);
+    
+    if (!categoryForm) {
+        console.error('Kategori formu bulunamadı!');
+    }
+    if (!categoryInput) {
+        console.error('Kategori input bulunamadı!');
+    }
+    if (!productSelect) {
+        console.error('Ürün kategori select bulunamadı!');
+    }
+});
+
+// Ürün oluşturma formu
+document.getElementById('product-form').addEventListener('submit', function(e) {
+    e.preventDefault();
+    
+    const name = document.getElementById('product_name').value;
+    const description = document.getElementById('product_description').value;
+    const points = document.getElementById('product_points').value;
+    const category_id = document.getElementById('product_category').value;
+    const imageFile = document.getElementById('product_image').files[0];
+    
+    const formData = new FormData();
+    formData.append('name', name);
+    formData.append('description', description);
+    formData.append('points_required', points);
+    formData.append('category_id', category_id);
+    
+    if (imageFile) {
+        formData.append('product_image', imageFile);
+    }
+    
+    fetch('/admin/create_product', {
+        method: 'POST',
+        body: formData
+    })
+    .then(response => response.json())
+    .then(data => {
+        if (data.success) {
+            alert(data.message);
+            document.getElementById('product-form').reset();
+            location.reload();
+        } else {
+            alert('Hata: ' + data.error);
+        }
+    })
+    .catch(error => {
+        alert('Bir hata oluştu: ' + error);
+    });
+});
+
+// Şube durumu değiştirme
+function toggleBranch(branchId) {
+    fetch(`/admin/toggle_branch/${branchId}`, {
+        method: 'POST'
+    })
+    .then(response => response.json())
+    .then(data => {
+        if (data.success) {
+            alert(data.message);
+            location.reload();
+        } else {
+            alert('Hata: ' + data.error);
+        }
+    })
+    .catch(error => {
+        alert('Bir hata oluştu: ' + error);
+    });
+}
+
+// Ürün durumu değiştirme
+function toggleProduct(productId) {
+    fetch(`/admin/toggle_product/${productId}`, {
+        method: 'POST'
+    })
+    .then(response => response.json())
+    .then(data => {
+        if (data.success) {
+            alert(data.message);
+            location.reload();
+        } else {
+            alert('Hata: ' + data.error);
+        }
+    })
+    .catch(error => {
+        alert('Bir hata oluştu: ' + error);
+    });
+}
+
+// Hızlı rapor gösterme
+function showQuickReport(period) {
+    const endDate = new Date().toISOString().split('T')[0];
+    let startDate = new Date();
+    
+    switch(period) {
+        case 'daily':
+            startDate = new Date();
+            break;
+        case 'weekly':
+            startDate.setDate(startDate.getDate() - 7);
+            break;
+        case 'monthly':
+            startDate.setMonth(startDate.getMonth() - 1);
+            break;
+    }
+    
+    const startDateStr = startDate.toISOString().split('T')[0];
+    
+    fetch(`/admin/report_data?type=points&start_date=${startDateStr}&end_date=${endDate}`)
+        .then(response => response.json())
+        .then(data => {
+            let summary = `${period.toUpperCase()} ÖZET RAPOR\n\n`;
+            
+            // Güvenli veri kontrolü
+            const chartPoints = data.chart_points || [];
+            const totalPoints = chartPoints.length > 0 ? chartPoints.reduce((a, b) => a + b, 0) : 0;
+            const activeDays = chartPoints.length > 0 ? chartPoints.filter(p => p > 0).length : 0;
+            const avgPoints = chartPoints.length > 0 ? (totalPoints / chartPoints.length).toFixed(1) : 0;
+            
+            summary += `Toplam Puan Kazanımı: ${totalPoints}\n`;
+            summary += `Aktif Günler: ${activeDays}\n`;
+            summary += `Ortalama Günlük Puan: ${avgPoints}`;
+            
+            alert(summary);
+        })
+        .catch(error => {
+            alert('Rapor yüklenirken hata oluştu: ' + error);
+        });
+}
+
+// Tüm şubeleri seç/seçme
+document.getElementById('select_all_branches').addEventListener('change', function() {
+    const checkboxes = document.querySelectorAll('.branch-checkbox');
+    checkboxes.forEach(checkbox => {
+        checkbox.checked = this.checked;
+    });
+});
+
+// Tüm ürünleri seç/seçme
+document.getElementById('select_all_products').addEventListener('change', function() {
+    const checkboxes = document.querySelectorAll('.product-checkbox');
+    const discountInputs = document.querySelectorAll('.discount-input');
+    const discountTypes = document.querySelectorAll('.discount-type');
+    
+    checkboxes.forEach((checkbox, index) => {
+        checkbox.checked = this.checked;
+        discountInputs[index].disabled = !this.checked;
+        discountTypes[index].disabled = !this.checked;
+        
+        if (this.checked) {
+            discountInputs[index].value = '10'; // Varsayılan %10 indirim
+        } else {
+            discountInputs[index].value = '';
+        }
+    });
+});
+
+// Ürün seçimi değiştiğinde indirim alanlarını aktif/pasif yap
+document.querySelectorAll('.product-checkbox').forEach(checkbox => {
+    checkbox.addEventListener('change', function() {
+        const productId = this.value;
+        const discountInput = document.getElementById(`discount_${productId}`);
+        const discountType = document.getElementById(`discount_type_${productId}`);
+        
+        discountInput.disabled = !this.checked;
+        discountType.disabled = !this.checked;
+        
+        if (this.checked && !discountInput.value) {
+            discountInput.value = '10'; // Varsayılan %10 indirim
+        } else if (!this.checked) {
+            discountInput.value = '';
+        }
+    });
+});
+
+// QR ayarlarını göster/gizle
+document.getElementById('qr_enabled').addEventListener('change', function() {
+    const qrSettings = document.getElementById('qr-settings');
+    qrSettings.style.display = this.checked ? 'block' : 'none';
+});
+
+// Kampanya formu gönderme
+document.getElementById('campaign-form').addEventListener('submit', function(e) {
+    e.preventDefault();
+    
+    const formData = new FormData();
+    formData.append('title', document.getElementById('campaign_title').value);
+    formData.append('description', document.getElementById('campaign_description').value);
+    formData.append('start_date', document.getElementById('start_date').value);
+    formData.append('end_date', document.getElementById('end_date').value);
+    
+    // Şube bilgilerini ekle
+    const selectedBranches = [];
+    document.querySelectorAll('.branch-checkbox:checked').forEach(checkbox => {
+        selectedBranches.push(checkbox.value);
+    });
+    formData.append('branches', JSON.stringify(selectedBranches));
+    
+    // Seçilen ürünleri ve indirim bilgilerini ekle
+    const selectedProducts = [];
+    document.querySelectorAll('.product-checkbox:checked').forEach(checkbox => {
+        const productId = checkbox.value;
+        const discount = document.getElementById(`discount_${productId}`).value;
+        const discountType = document.getElementById(`discount_type_${productId}`).value;
+        
+        if (discount && discount > 0) {
+            selectedProducts.push({
+                product_id: parseInt(productId),
+                discount: parseFloat(discount),
+                discount_type: discountType
+            });
+        }
+    });
+    formData.append('products', JSON.stringify(selectedProducts));
+    
+    // QR kod ayarlarını ekle
+    formData.append('qr_enabled', document.getElementById('qr_enabled').checked);
+    formData.append('max_usage_per_customer', document.getElementById('max_usage_per_customer').value);
+    formData.append('total_usage_limit', document.getElementById('total_usage_limit').value);
+    
+    // Görsel dosyası varsa ekle
+    const imageFile = document.getElementById('campaign_image').files[0];
+    if (imageFile) {
+        formData.append('image', imageFile);
+    }
+    
+    fetch('/admin/create_campaign', {
+        method: 'POST',
+        body: formData
+    })
+    .then(response => response.json())
+    .then(data => {
+        const resultDiv = document.getElementById('campaign-result');
+        if (data.success) {
+            resultDiv.innerHTML = `
+                <div class="alert alert-success">
+                    <strong>Başarılı!</strong> Kampanya oluşturuldu.
+                </div>
+            `;
+            document.getElementById('campaign-form').reset();
+        } else {
+            resultDiv.innerHTML = `
+                <div class="alert alert-danger">
+                    <strong>Hata!</strong> ${data.error}
+                </div>
+            `;
+        }
+        resultDiv.style.display = 'block';
+    })
+    .catch(error => {
+        const resultDiv = document.getElementById('campaign-result');
+        resultDiv.innerHTML = `
+            <div class="alert alert-danger">
+                <strong>Hata!</strong> Kampanya oluşturulurken bir sorun oluştu.
+            </div>
+        `;
+        resultDiv.style.display = 'block';
+    });
+});
+
+// Şube yönetimi fonksiyonları
+function toggleBranch(branchId, isActive) {
+    const action = isActive ? 'pasif' : 'aktif';
+    if (confirm(`Bu şubeyi ${action} yapmak istediğinizden emin misiniz?`)) {
+        fetch(`/admin/toggle_branch/${branchId}`, {
+            method: 'POST',
+            headers: {
+                'Content-Type': 'application/json',
+            }
+        })
+        .then(response => response.json())
+        .then(data => {
+            if (data.success) {
+                alert(data.message);
+                location.reload();
+            } else {
+                alert('Hata: ' + data.error);
+            }
+        })
+        .catch(error => {
+            alert('Bir hata oluştu!');
+        });
+    }
+}
+
+function editBranch(branchId) {
+    // Şube bilgilerini al
+    fetch(`/admin/edit_branch/${branchId}`, {
+        method: 'GET'
+    })
+    .then(response => response.json())
+    .then(data => {
+        if (data.success) {
+            const branch = data.branch;
+            
+            // Formu doldur
+            document.getElementById('branch_name').value = branch.name;
+            document.getElementById('branch_address').value = branch.address;
+            document.getElementById('branch_phone').value = branch.phone || '';
+            document.getElementById('branch_email').value = branch.email;
+            document.getElementById('working_hours').value = branch.working_hours || '';
+            
+            // Form submit butonunu güncelle
+            const submitBtn = document.querySelector('#branch-form button[type="submit"]');
+            submitBtn.innerHTML = '<i class="fas fa-save"></i> Şube Güncelle';
+            submitBtn.className = 'btn btn-success';
+            
+            // Form'a hidden input ekle
+            let hiddenInput = document.getElementById('edit_branch_id');
+            if (!hiddenInput) {
+                hiddenInput = document.createElement('input');
+                hiddenInput.type = 'hidden';
+                hiddenInput.id = 'edit_branch_id';
+                hiddenInput.name = 'edit_branch_id';
+                document.getElementById('branch-form').appendChild(hiddenInput);
+            }
+            hiddenInput.value = branchId;
+            
+            // Şifre alanını opsiyonel yap
+            document.getElementById('branch_password').required = false;
+            document.getElementById('branch_password').placeholder = 'Boş bırakın (değişmez)';
+            
+        } else {
+            alert('Şube bilgileri alınamadı: ' + data.error);
+        }
+    })
+    .catch(error => {
+        alert('Bir hata oluştu!');
+    });
+}
+
+// Şube formu submit
+document.getElementById('branch-form').addEventListener('submit', function(e) {
+    e.preventDefault();
+    
+    const editBranchId = document.getElementById('edit_branch_id');
+    const isEdit = editBranchId && editBranchId.value;
+    
+    // FormData kullanarak dosya yükleme desteği
+    const formData = new FormData();
+    formData.append('name', document.getElementById('branch_name').value);
+    formData.append('address', document.getElementById('branch_address').value);
+    formData.append('phone', document.getElementById('branch_phone').value);
+    formData.append('email', document.getElementById('branch_email').value);
+    formData.append('working_hours', document.getElementById('working_hours').value);
+    
+    const password = document.getElementById('branch_password').value;
+    if (password) {
+        formData.append('password', password);
+    }
+    
+    // Görsel dosyası varsa ekle
+    const imageFile = document.getElementById('branch_image').files[0];
+    if (imageFile) {
+        formData.append('image', imageFile);
+    }
+    
+    const url = isEdit ? `/admin/edit_branch/${editBranchId.value}` : '/admin/create_branch';
+    
+    fetch(url, {
+        method: 'POST',
+        body: formData  // Content-Type header'ını kaldır, FormData otomatik ayarlar
+    })
+    .then(response => response.json())
+    .then(data => {
+        const resultDiv = document.getElementById('branch-result');
+        if (data.success) {
+            resultDiv.innerHTML = `
+                <div class="alert alert-success">
+                    <strong>Başarılı!</strong> ${data.message}
+                </div>
+            `;
+            document.getElementById('branch-form').reset();
+            
+            // Form'u sıfırla
+            const submitBtn = document.querySelector('#branch-form button[type="submit"]');
+            submitBtn.innerHTML = '<i class="fas fa-plus"></i> Şube Oluştur';
+            submitBtn.className = 'btn btn-warning';
+            
+            // Hidden input'u kaldır
+            if (editBranchId) {
+                editBranchId.remove();
+            }
+            
+            // Şifre alanını zorunlu yap
+            document.getElementById('branch_password').required = true;
+            document.getElementById('branch_password').placeholder = '';
+            
+            // Sayfayı yenile
+            setTimeout(() => {
+                location.reload();
+            }, 1500);
+        } else {
+            resultDiv.innerHTML = `
+                <div class="alert alert-danger">
+                    <strong>Hata!</strong> ${data.error}
+                </div>
+            `;
+        }
+        resultDiv.style.display = 'block';
+    })
+    .catch(error => {
+        const resultDiv = document.getElementById('branch-result');
+        resultDiv.innerHTML = `
+            <div class="alert alert-danger">
+                <strong>Hata!</strong> Şube işlemi sırasında bir sorun oluştu.
+            </div>
+        `;
+        resultDiv.style.display = 'block';
+    });
+});
+
+// Logo yükleme formu
+document.getElementById('logoForm').addEventListener('submit', function(e) {
+    e.preventDefault();
+    
+    const formData = new FormData();
+    const logoFile = document.getElementById('logoFile').files[0];
+    
+    if (!logoFile) {
+        alert('Lütfen bir dosya seçin!');
+        return;
+    }
+    
+    formData.append('logo', logoFile);
+    
+    const resultDiv = document.getElementById('logoResult');
+    resultDiv.innerHTML = `
+        <div class="alert alert-info">
+            <i class="fas fa-spinner fa-spin"></i> Logo yükleniyor...
+        </div>
+    `;
+    resultDiv.style.display = 'block';
+    
+    fetch('/admin/upload_logo', {
+        method: 'POST',
+        body: formData,
+        credentials: 'same-origin'
+    })
+    .then(response => response.json())
+    .then(data => {
+        if (data.success) {
+            resultDiv.innerHTML = `
+                <div class="alert alert-success">
+                    <i class="fas fa-check"></i> ${data.message}
+                </div>
+            `;
+            
+            // Sayfayı yenile ki yeni logo görünsün
+            setTimeout(() => {
+                location.reload();
+            }, 1500);
+        } else {
+            resultDiv.innerHTML = `
+                <div class="alert alert-danger">
+                    <i class="fas fa-exclamation-triangle"></i> Hata: ${data.error}
+                </div>
+            `;
+        }
+    })
+    .catch(error => {
+        resultDiv.innerHTML = `
+            <div class="alert alert-danger">
+                <i class="fas fa-exclamation-triangle"></i> Logo yüklenirken hata oluştu!
+            </div>
+        `;
+    });
+});
+
+// Arka plan resmi yükleme formu
+document.getElementById('backgroundForm').addEventListener('submit', function(e) {
+    e.preventDefault();
+    
+    const formData = new FormData();
+    const backgroundFile = document.getElementById('backgroundFile').files[0];
+    
+    if (!backgroundFile) {
+        alert('Lütfen bir dosya seçin!');
+        return;
+    }
+    
+    formData.append('background', backgroundFile);
+    
+    const resultDiv = document.getElementById('backgroundResult');
+    resultDiv.innerHTML = `
+        <div class="alert alert-info">
+            <i class="fas fa-spinner fa-spin"></i> Arka plan resmi yükleniyor...
+        </div>
+    `;
+    resultDiv.style.display = 'block';
+    
+    fetch('/admin/upload_background', {
+        method: 'POST',
+        body: formData,
+        credentials: 'same-origin'
+    })
+    .then(response => response.json())
+    .then(data => {
+        if (data.success) {
+            resultDiv.innerHTML = `
+                <div class="alert alert-success">
+                    <i class="fas fa-check"></i> ${data.message}
+                </div>
+            `;
+            
+            // Sayfayı yenile ki yeni arka plan görünsün
+            setTimeout(() => {
+                location.reload();
+            }, 1500);
+        } else {
+            resultDiv.innerHTML = `
+                <div class="alert alert-danger">
+                    <i class="fas fa-exclamation-triangle"></i> Hata: ${data.error}
+                </div>
+            `;
+        }
+    })
+    .catch(error => {
+        resultDiv.innerHTML = `
+            <div class="alert alert-danger">
+                <i class="fas fa-exclamation-triangle"></i> Arka plan resmi yüklenirken hata oluştu!
+            </div>
+        `;
+    });
+});
+
+// Kampanya yönetimi fonksiyonları
+function editCampaign(campaignId) {
+    fetch(`/admin/get_campaign/${campaignId}`)
+    .then(response => response.json())
+    .then(data => {
+        // Form alanlarını doldur
+        document.getElementById('campaign_title').value = data.title;
+        document.getElementById('campaign_description').value = data.description;
+        document.getElementById('start_date').value = data.start_date;
+        document.getElementById('end_date').value = data.end_date;
+        
+        // Şube seçimlerini işaretle
+        document.querySelectorAll('.branch-checkbox').forEach(checkbox => {
+            checkbox.checked = data.branches.includes(parseInt(checkbox.value));
+        });
+        
+        // Form butonunu güncelle
+        const submitBtn = document.querySelector('#campaign-form button[type="submit"]');
+        submitBtn.innerHTML = '<i class="fas fa-save"></i> Kampanyayı Güncelle';
+        submitBtn.onclick = function(e) {
+            e.preventDefault();
+            updateCampaign(campaignId);
+        };
+        
+        // Sil butonunu ekle/göster
+        let deleteBtn = document.getElementById('delete-campaign-btn');
+        if (!deleteBtn) {
+            deleteBtn = document.createElement('button');
+            deleteBtn.type = 'button';
+            deleteBtn.id = 'delete-campaign-btn';
+            deleteBtn.className = 'btn btn-danger ms-2';
+            deleteBtn.innerHTML = '<i class="fas fa-trash"></i> Sil';
+            // Güncelle butonunun hemen yanına ekle
+            submitBtn.parentNode.insertBefore(deleteBtn, submitBtn.nextSibling);
+        } else {
+            deleteBtn.style.display = 'inline-block';
+        }
+        deleteBtn.onclick = function() {
+            deleteCampaign(campaignId);
+        };
+        
+        // Formu görünür yap
+        document.getElementById('campaign-form').scrollIntoView({ behavior: 'smooth' });
+    })
+    .catch(error => {
+        alert('Kampanya bilgileri alınırken hata oluştu!');
+    });
+}
+
+function toggleCampaign(campaignId, currentStatus) {
+    if (confirm(`Kampanyayı ${currentStatus ? 'pasif' : 'aktif'} yapmak istediğinizden emin misiniz?`)) {
+        fetch(`/admin/toggle_campaign/${campaignId}`, {
+            method: 'POST',
+            credentials: 'same-origin'
+        })
+        .then(response => response.json())
+        .then(data => {
+            if (data.success) {
+                alert(data.message);
+                location.reload();
+            } else {
+                alert('Hata: ' + data.error);
+            }
+        })
+        .catch(error => {
+            alert('Kampanya durumu değiştirilirken hata oluştu!');
+        });
+    }
+}
+
+function deleteCampaign(campaignId) {
+    if (confirm('Bu kampanyayı silmek istediğinizden emin misiniz? Bu işlem geri alınamaz!')) {
+        fetch(`/admin/delete_campaign/${campaignId}`, {
+            method: 'DELETE',
+            credentials: 'same-origin'
+        })
+        .then(response => response.json())
+        .then(data => {
+            if (data.success) {
+                alert(data.message);
+                location.reload();
+            } else {
+                alert('Hata: ' + data.error);
+            }
+        })
+        .catch(error => {
+            alert('Kampanya silinirken hata oluştu!');
+        });
+    }
+}
+
+function updateCampaign(campaignId) {
+    const formData = new FormData();
+    formData.append('title', document.getElementById('campaign_title').value);
+    formData.append('description', document.getElementById('campaign_description').value);
+    formData.append('start_date', document.getElementById('start_date').value);
+    formData.append('end_date', document.getElementById('end_date').value);
+    
+    const imageFile = document.getElementById('campaign_image').files[0];
+    if (imageFile) {
+        formData.append('image', imageFile);
+    }
+    
+    // Seçili şubeleri ekle
+    const selectedBranches = [];
+    document.querySelectorAll('.branch-checkbox:checked').forEach(checkbox => {
+        selectedBranches.push(checkbox.value);
+    });
+    formData.append('branches', JSON.stringify(selectedBranches));
+    
+    fetch(`/admin/update_campaign/${campaignId}`, {
+        method: 'POST',
+        body: formData,
+        credentials: 'same-origin'
+    })
+    .then(response => response.json())
+    .then(data => {
+        if (data.success) {
+            alert(data.message);
+            location.reload();
+        } else {
+            alert('Hata: ' + data.error);
+        }
+    })
+    .catch(error => {
+        alert('Kampanya güncellenirken hata oluştu!');
+    });
+}
+
+// Kampanya QR Yönetimi
+function manageCampaignQR(campaignId) {
+    const modal = new bootstrap.Modal(document.getElementById('campaignQRModal'));
+    modal.show();
+    
+    // QR verilerini yükle
+    fetch(`/admin/campaign/${campaignId}/qr_usage`)
+    .then(response => response.json())
+    .then(data => {
+        if (data.success) {
+            let content = `
+                <div class="campaign-qr-management">
+                    <div class="row mb-4">
+                        <div class="col-md-6">
+                            <h6 class="text-primary">Kampanya Bilgileri</h6>
+                            <p><strong>Başlık:</strong> ${data.campaign.title}</p>
+                            <p><strong>Açıklama:</strong> ${data.campaign.description}</p>
+                        </div>
+                        <div class="col-md-6">
+                            <h6 class="text-success">QR İstatistikleri</h6>
+                            <p><strong>Toplam QR Oluşturulan:</strong> ${data.total_qr_generated}</p>
+                            <p><strong>Kullanılan QR:</strong> ${data.total_qr_used}</p>
+                            <p><strong>Aktif QR:</strong> ${data.total_qr_active}</p>
+                        </div>
+                    </div>
+                    
+                    <h6 class="text-warning mb-3">
+                        <i class="fas fa-list"></i> QR Kullanım Geçmişi
+                    </h6>
+            `;
+            
+            if (data.qr_usages && data.qr_usages.length > 0) {
+                content += `
+                    <div class="table-responsive">
+                        <table class="table table-sm table-striped">
+                            <thead class="table-warning">
+                                <tr>
+                                    <th>Müşteri</th>
+                                    <th>QR Kodu</th>
+                                    <th>Oluşturulma</th>
+                                    <th>Kullanım</th>
+                                    <th>Şube</th>
+                                    <th>Durum</th>
+                                </tr>
+                            </thead>
+                            <tbody>
+                `;
+                
+                data.qr_usages.forEach(usage => {
+                    const statusBadge = usage.is_used 
+                        ? '<span class="badge bg-success">Kullanıldı</span>'
+                        : usage.is_expired 
+                        ? '<span class="badge bg-danger">Süresi Doldu</span>'
+                        : '<span class="badge bg-warning">Aktif</span>';
+                    
+                    content += `
+                        <tr>
+                            <td>
+                                <strong>${usage.customer_name}</strong><br>
+                                <small class="text-muted">${usage.customer_email}</small>
+                            </td>
+                            <td>
+                                <code class="small">${usage.qr_code.substring(0, 12)}...</code>
+                            </td>
+                            <td>
+                                <small>${usage.created_at}</small>
+                            </td>
+                            <td>
+                                <small>${usage.used_at || '-'}</small>
+                            </td>
+                            <td>
+                                <small>${usage.used_by_branch || '-'}</small>
+                            </td>
+                            <td>${statusBadge}</td>
+                        </tr>
+                    `;
+                });
+                
+                content += `
+                            </tbody>
+                        </table>
+                    </div>
+                `;
+            } else {
+                content += `
+                    <div class="alert alert-info">
+                        <i class="fas fa-info-circle"></i> Bu kampanya için henüz QR kod oluşturulmamış.
+                    </div>
+                `;
+            }
+            
+            content += '</div>';
+            document.getElementById('campaignQRContent').innerHTML = content;
+        } else {
+            document.getElementById('campaignQRContent').innerHTML = `
+                <div class="alert alert-danger">
+                    <i class="fas fa-exclamation-triangle"></i> QR verileri yüklenirken hata oluştu: ${data.error}
+                </div>
+            `;
+        }
+    })
+    .catch(error => {
+        document.getElementById('campaignQRContent').innerHTML = `
+            <div class="alert alert-danger">
+                <i class="fas fa-exclamation-triangle"></i> Bağlantı hatası oluştu.
+            </div>
+        `;
+    });
+}
+
+// Splash resmi yükleme
+document.getElementById('splashForm').addEventListener('submit', function(e) {
+    e.preventDefault();
+    
+    const formData = new FormData();
+    const splashFile = document.getElementById('splashFile').files[0];
+    
+    if (!splashFile) {
+        alert('Lütfen bir resim dosyası seçin!');
+        return;
+    }
+    
+    // Dosya boyutu kontrolü (16MB)
+    if (splashFile.size > 16 * 1024 * 1024) {
+        alert('Dosya boyutu 16MB\'dan büyük olamaz!');
+        return;
+    }
+    
+    // Dosya türü kontrolü
+    const allowedTypes = ['image/jpeg', 'image/jpg', 'image/png'];
+    if (!allowedTypes.includes(splashFile.type)) {
+        alert('Sadece JPG, JPEG ve PNG formatları desteklenir!');
+        return;
+    }
+    
+    formData.append('splash', splashFile);
+    
+    const submitBtn = document.querySelector('#splashForm button[type="submit"]');
+    const originalText = submitBtn.innerHTML;
+    submitBtn.innerHTML = '<i class="fas fa-spinner fa-spin"></i> Yükleniyor...';
+    submitBtn.disabled = true;
+    
+    fetch('/admin/upload_splash', {
+        method: 'POST',
+        body: formData,
+        credentials: 'same-origin'
+    })
+    .then(response => response.json())
+    .then(data => {
+        const resultDiv = document.getElementById('splashResult');
+        if (data.success) {
+            resultDiv.innerHTML = `
+                <div class="alert alert-success">
+                    <i class="fas fa-check-circle"></i> ${data.message}
+                </div>
+            `;
+            resultDiv.style.display = 'block';
+            
+            // Sayfayı yenile
+            setTimeout(() => {
+                location.reload();
+            }, 2000);
+        } else {
+            resultDiv.innerHTML = `
+                <div class="alert alert-danger">
+                    <i class="fas fa-exclamation-triangle"></i> Hata: ${data.error}
+                </div>
+            `;
+            resultDiv.style.display = 'block';
+        }
+    })
+    .catch(error => {
+        const resultDiv = document.getElementById('splashResult');
+        resultDiv.innerHTML = `
+            <div class="alert alert-danger">
+                <i class="fas fa-exclamation-triangle"></i> Yükleme sırasında hata oluştu!
+            </div>
+        `;
+        resultDiv.style.display = 'block';
+    })
+    .finally(() => {
+        submitBtn.innerHTML = originalText;
+        submitBtn.disabled = false;
+    });
+});
+
+// App Icon yükleme
+document.getElementById('appIconForm').addEventListener('submit', function(e) {
+    e.preventDefault();
+    
+    const formData = new FormData();
+    const appIconFile = document.getElementById('appIconFile').files[0];
+    
+    if (!appIconFile) {
+        alert('Lütfen bir resim dosyası seçin!');
+        return;
+    }
+    
+    // Dosya boyutu kontrolü (16MB)
+    if (appIconFile.size > 16 * 1024 * 1024) {
+        alert('Dosya boyutu 16MB\'dan büyük olamaz!');
+        return;
+    }
+    
+    // Dosya türü kontrolü
+    const allowedTypes = ['image/jpeg', 'image/jpg', 'image/png'];
+    if (!allowedTypes.includes(appIconFile.type)) {
+        alert('Sadece JPG, JPEG ve PNG formatları desteklenir!');
+        return;
+    }
+    
+    // Kare resim kontrolü (opsiyonel)
+    const img = new Image();
+    img.onload = function() {
+        if (this.width !== this.height) {
+            if (!confirm('Icon kare (1:1 oran) olmalıdır. Devam etmek istiyor musunuz?')) {
+                return;
+            }
+        }
+        
+        formData.append('app_icon', appIconFile);
+        uploadAppIcon(formData);
+    };
+    img.src = URL.createObjectURL(appIconFile);
+});
+
+function uploadAppIcon(formData) {
+    const submitBtn = document.querySelector('#appIconForm button[type="submit"]');
+    const originalText = submitBtn.innerHTML;
+    submitBtn.innerHTML = '<i class="fas fa-spinner fa-spin"></i> Yükleniyor...';
+    submitBtn.disabled = true;
+    
+    fetch('/admin/upload_app_icon', {
+        method: 'POST',
+        body: formData,
+        credentials: 'same-origin'
+    })
+    .then(response => response.json())
+    .then(data => {
+        const resultDiv = document.getElementById('appIconResult');
+        if (data.success) {
+            resultDiv.innerHTML = `
+                <div class="alert alert-success">
+                    <i class="fas fa-check-circle"></i> ${data.message}
+                    <br><small>Uygulama yeniden başlatıldığında yeni icon görünecek.</small>
+                </div>
+            `;
+            resultDiv.style.display = 'block';
+            
+            // Sayfayı yenile
+            setTimeout(() => {
+                location.reload();
+            }, 3000);
+        } else {
+            resultDiv.innerHTML = `
+                <div class="alert alert-danger">
+                    <i class="fas fa-exclamation-triangle"></i> Hata: ${data.error}
+                </div>
+            `;
+            resultDiv.style.display = 'block';
+        }
+    })
+    .catch(error => {
+        console.error('Error:', error);
+        const resultDiv = document.getElementById('appIconResult');
+        resultDiv.innerHTML = `
+            <div class="alert alert-danger">
+                <i class="fas fa-exclamation-triangle"></i> Yükleme sırasında bir hata oluştu.
+            </div>
+        `;
+        resultDiv.style.display = 'block';
+    })
+    .finally(() => {
+        submitBtn.innerHTML = originalText;
+        submitBtn.disabled = false;
+    });
+}
+
+// Login Logo Upload
+document.getElementById('loginLogoForm').addEventListener('submit', function(e) {
+    e.preventDefault();
+    
+    const loginLogoFile = document.getElementById('loginLogoFile').files[0];
+    if (!loginLogoFile) {
+        alert('Lütfen bir dosya seçin.');
+        return;
+    }
+    
+    // Dosya boyutu kontrolü (16MB)
+    if (loginLogoFile.size > 16 * 1024 * 1024) {
+        alert('Dosya boyutu 16MB\'dan küçük olmalıdır.');
+        return;
+    }
+    
+    // Resim önizlemesi
+    const img = new Image();
+    img.onload = function() {
+        const formData = new FormData();
+        
+        // Boyut uyarısı
+        if (this.width < 256 || this.height < 256) {
+            if (!confirm('Resim boyutu küçük görünüyor. Devam etmek istiyor musunuz?')) {
+                return;
+            }
+        }
+        
+        formData.append('login_logo', loginLogoFile);
+        uploadLoginLogo(formData);
+    };
+    img.src = URL.createObjectURL(loginLogoFile);
+});
+
+function uploadLoginLogo(formData) {
+    const submitBtn = document.querySelector('#loginLogoForm button[type="submit"]');
+    const originalText = submitBtn.innerHTML;
+    submitBtn.innerHTML = '<i class="fas fa-spinner fa-spin"></i> Yükleniyor...';
+    submitBtn.disabled = true;
+    
+    fetch('/admin/upload_login_logo', {
+        method: 'POST',
+        body: formData,
+        credentials: 'same-origin'
+    })
+    .then(response => response.json())
+    .then(data => {
+        const resultDiv = document.getElementById('loginLogoResult');
+        if (data.success) {
+            resultDiv.innerHTML = `
+                <div class="alert alert-success">
+                    <i class="fas fa-check-circle"></i> ${data.message}
+                    <br><small>Mobil uygulamada yeni logo görünecek.</small>
+                </div>
+            `;
+            resultDiv.style.display = 'block';
+            
+            // Sayfayı yenile
+            setTimeout(() => {
+                location.reload();
+            }, 2000);
+        } else {
+            resultDiv.innerHTML = `
+                <div class="alert alert-danger">
+                    <i class="fas fa-exclamation-triangle"></i> ${data.error}
+                </div>
+            `;
+            resultDiv.style.display = 'block';
+        }
+    })
+    .catch(error => {
+        console.error('Error:', error);
+        const resultDiv = document.getElementById('loginLogoResult');
+        resultDiv.innerHTML = `
+            <div class="alert alert-danger">
+                <i class="fas fa-exclamation-triangle"></i> Yükleme sırasında bir hata oluştu.
+            </div>
+        `;
+        resultDiv.style.display = 'block';
+    })
+    .finally(() => {
+        submitBtn.innerHTML = originalText;
+        submitBtn.disabled = false;
+    });
+}
+
+// Survey Management JavaScript
+document.addEventListener('DOMContentLoaded', function() {
+    loadSurveys();
+    
+    // Add question functionality
+    document.getElementById('add-question').addEventListener('click', function() {
+        addSurveyQuestion();
+    });
+    
+    // Survey form submission
+    document.getElementById('survey-form').addEventListener('submit', function(e) {
+        e.preventDefault();
+        createSurvey();
+    });
+    
+    // Question type change handler
+    document.addEventListener('change', function(e) {
+        if (e.target.classList.contains('question-type')) {
+            toggleQuestionOptions(e.target);
+        }
+    });
+    
+    // Remove question handler
+    document.addEventListener('click', function(e) {
+        if (e.target.classList.contains('remove-question') || e.target.parentElement.classList.contains('remove-question')) {
+            removeSurveyQuestion(e.target);
+        }
+    });
+});
+
+function addSurveyQuestion() {
+    const questionsContainer = document.getElementById('survey-questions');
+    const questionCount = questionsContainer.children.length;
+    
+    const questionHtml = `
+        <div class="question-item border rounded p-3 mb-3">
+            <div class="row">
+                <div class="col-8">
+                    <input type="text" class="form-control question-text" placeholder="Soru metni" required>
+                </div>
+                <div class="col-3">
+                    <select class="form-select question-type">
+                        <option value="rating">Puanlama (1-5)</option>
+                        <option value="text">Metin</option>
+                        <option value="multiple_choice">Çoktan Seçmeli</option>
+                        <option value="yes_no">Evet/Hayır</option>
+                    </select>
+                </div>
+                <div class="col-1">
+                    <button type="button" class="btn btn-outline-danger btn-sm remove-question">
+                        <i class="fas fa-trash"></i>
+                    </button>
+                </div>
+            </div>
+            <div class="options-container mt-2" style="display: none;">
+                <label class="form-label">Seçenekler (her satıra bir seçenek)</label>
+                <textarea class="form-control question-options" rows="3" placeholder="Seçenek 1&#10;Seçenek 2&#10;Seçenek 3"></textarea>
+            </div>
+        </div>
+    `;
+    
+    questionsContainer.insertAdjacentHTML('beforeend', questionHtml);
+    updateRemoveButtons();
+}
+
+function removeSurveyQuestion(button) {
+    const questionItem = button.closest('.question-item');
+    questionItem.remove();
+    updateRemoveButtons();
+}
+
+function updateRemoveButtons() {
+    const questions = document.querySelectorAll('.question-item');
+    questions.forEach((question, index) => {
+        const removeBtn = question.querySelector('.remove-question');
+        removeBtn.disabled = questions.length <= 1;
+    });
+}
+
+function toggleQuestionOptions(selectElement) {
+    const questionItem = selectElement.closest('.question-item');
+    const optionsContainer = questionItem.querySelector('.options-container');
+    
+    if (selectElement.value === 'multiple_choice') {
+        optionsContainer.style.display = 'block';
+        optionsContainer.querySelector('.question-options').required = true;
+    } else {
+        optionsContainer.style.display = 'none';
+        optionsContainer.querySelector('.question-options').required = false;
+    }
+}
+
+function createSurvey() {
+    const title = document.getElementById('survey_title').value;
+    const description = document.getElementById('survey_description').value;
+    const startDate = document.getElementById('survey_start_date').value;
+    const endDate = document.getElementById('survey_end_date').value;
+    const isActive = document.getElementById('survey_is_active').checked;
+    
+    // Collect questions
+    const questions = [];
+    document.querySelectorAll('.question-item').forEach((item, index) => {
+        const questionText = item.querySelector('.question-text').value;
+        const questionType = item.querySelector('.question-type').value;
+        const options = item.querySelector('.question-options')?.value || '';
+        
+        questions.push({
+            order: index + 1,
+            text: questionText,
+            type: questionType,
+            options: questionType === 'multiple_choice' ? options.split('\n').filter(opt => opt.trim()) : []
+        });
+    });
+    
+    const surveyData = {
+        title: title,
+        description: description,
+        start_date: startDate,
+        end_date: endDate,
+        is_active: isActive,
+        questions: questions
+    };
+    
+    const submitBtn = document.querySelector('#survey-form button[type="submit"]');
+    const originalText = submitBtn.innerHTML;
+    submitBtn.innerHTML = '<i class="fas fa-spinner fa-spin"></i> Oluşturuluyor...';
+    submitBtn.disabled = true;
+    
+    fetch('/admin/create_survey', {
+        method: 'POST',
+        headers: {
+            'Content-Type': 'application/json',
+        },
+        body: JSON.stringify(surveyData),
+        credentials: 'same-origin'
+    })
+    .then(response => response.json())
+    .then(data => {
+        const resultDiv = document.getElementById('survey-result');
+        if (data.success) {
+            resultDiv.innerHTML = `
+                <div class="alert alert-success">
+                    <i class="fas fa-check-circle"></i> ${data.message}
+                </div>
+            `;
+            resultDiv.style.display = 'block';
+            
+            // Reset form
+            document.getElementById('survey-form').reset();
+            
+            // Reset questions to default
+            const questionsContainer = document.getElementById('survey-questions');
+            questionsContainer.innerHTML = `
+                <div class="question-item border rounded p-3 mb-3">
+                    <div class="row">
+                        <div class="col-8">
+                            <input type="text" class="form-control question-text" placeholder="Soru metni" required>
+                        </div>
+                        <div class="col-3">
+                            <select class="form-select question-type">
+                                <option value="rating">Puanlama (1-5)</option>
+                                <option value="text">Metin</option>
+                                <option value="multiple_choice">Çoktan Seçmeli</option>
+                                <option value="yes_no">Evet/Hayır</option>
+                            </select>
+                        </div>
+                        <div class="col-1">
+                            <button type="button" class="btn btn-outline-danger btn-sm remove-question" disabled>
+                                <i class="fas fa-trash"></i>
+                            </button>
+                        </div>
+                    </div>
+                    <div class="options-container mt-2" style="display: none;">
+                        <label class="form-label">Seçenekler (her satıra bir seçenek)</label>
+                        <textarea class="form-control question-options" rows="3" placeholder="Seçenek 1&#10;Seçenek 2&#10;Seçenek 3"></textarea>
+                    </div>
+                </div>
+            `;
+            
+            // Reload surveys list
+            loadSurveys();
+        } else {
+            resultDiv.innerHTML = `
+                <div class="alert alert-danger">
+                    <i class="fas fa-exclamation-triangle"></i> Hata: ${data.error}
+                </div>
+            `;
+            resultDiv.style.display = 'block';
+        }
+    })
+    .catch(error => {
+        console.error('Error:', error);
+        const resultDiv = document.getElementById('survey-result');
+        resultDiv.innerHTML = `
+            <div class="alert alert-danger">
+                <i class="fas fa-exclamation-triangle"></i> Anket oluşturulurken bir hata oluştu.
+            </div>
+        `;
+        resultDiv.style.display = 'block';
+    })
+    .finally(() => {
+        submitBtn.innerHTML = originalText;
+        submitBtn.disabled = false;
+    });
+}
+
+function loadSurveys() {
+    fetch('/admin/get_surveys', {
+        method: 'GET',
+        credentials: 'same-origin'
+    })
+    .then(response => response.json())
+    .then(data => {
+        if (data.success) {
+            const tbody = document.querySelector('#surveys-table tbody');
+            tbody.innerHTML = '';
+            
+            if (data.surveys.length === 0) {
+                tbody.innerHTML = '<tr><td colspan="5" class="text-center text-muted">Henüz anket oluşturulmamış.</td></tr>';
+                return;
+            }
+            
+            data.surveys.forEach(survey => {
+                const startDate = new Date(survey.start_date).toLocaleDateString('tr-TR');
+                const endDate = new Date(survey.end_date).toLocaleDateString('tr-TR');
+                const now = new Date();
+                const surveyStart = new Date(survey.start_date);
+                const surveyEnd = new Date(survey.end_date);
+                
+                let statusBadge = '';
+                if (!survey.is_active) {
+                    statusBadge = '<span class="badge bg-secondary">Pasif</span>';
+                } else if (now < surveyStart) {
+                    statusBadge = '<span class="badge bg-warning">Beklemede</span>';
+                } else if (now > surveyEnd) {
+                    statusBadge = '<span class="badge bg-danger">Süresi Dolmuş</span>';
+                } else {
+                    statusBadge = '<span class="badge bg-success">Aktif</span>';
+                }
+                
+                const row = `
+                    <tr>
+                        <td>
+                            <strong>${survey.title}</strong><br>
+                            <small class="text-muted">${survey.description.substring(0, 50)}${survey.description.length > 50 ? '...' : ''}</small>
+                        </td>
+                        <td>
+                            <small>
+                                ${startDate}<br>
+                                ${endDate}
+                            </small>
+                        </td>
+                        <td>${statusBadge}</td>
+                        <td>
+                            <span class="badge bg-info">${survey.response_count || 0}</span>
+                        </td>
+                        <td>
+                            <div class="btn-group btn-group-sm">
+                                <button class="btn btn-outline-info btn-sm" onclick="viewSurveyResponses(${survey.id})" title="Yanıtları Görüntüle">
+                                    <i class="fas fa-chart-bar"></i>
+                                </button>
+                                <button class="btn btn-outline-primary btn-sm" onclick="editSurvey(${survey.id})" title="Düzenle">
+                                    <i class="fas fa-edit"></i>
+                                </button>
+                                <button class="btn btn-outline-${survey.is_active ? 'danger' : 'success'} btn-sm" 
+                                        onclick="toggleSurvey(${survey.id}, ${survey.is_active})" title="${survey.is_active ? 'Pasif Yap' : 'Aktif Yap'}">
+                                    <i class="fas fa-${survey.is_active ? 'times' : 'check'}"></i>
+                                </button>
+                                <button class="btn btn-outline-danger btn-sm" onclick="deleteSurvey(${survey.id})" title="Sil">
+                                    <i class="fas fa-trash"></i>
+                                </button>
+                            </div>
+                        </td>
+                    </tr>
+                `;
+                tbody.insertAdjacentHTML('beforeend', row);
+            });
+        }
+    })
+    .catch(error => {
+        console.error('Error loading surveys:', error);
+    });
+}
+
+function toggleSurvey(surveyId, isActive) {
+    const action = isActive ? 'deactivate' : 'activate';
+    const confirmMessage = isActive ? 'Bu anketi pasif yapmak istediğinizden emin misiniz?' : 'Bu anketi aktif yapmak istediğinizden emin misiniz?';
+    
+    if (!confirm(confirmMessage)) {
+        return;
+    }
+    
+    fetch(`/admin/toggle_survey/${surveyId}`, {
+        method: 'POST',
+        headers: {
+            'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({ action: action }),
+        credentials: 'same-origin'
+    })
+    .then(response => response.json())
+    .then(data => {
+        if (data.success) {
+            loadSurveys();
+        } else {
+            alert('Hata: ' + data.error);
+        }
+    })
+    .catch(error => {
+        console.error('Error:', error);
+        alert('İşlem sırasında bir hata oluştu.');
+    });
+}
+
+function deleteSurvey(surveyId) {
+    if (!confirm('Bu anketi silmek istediğinizden emin misiniz? Bu işlem geri alınamaz.')) {
+        return;
+    }
+    
+    fetch(`/admin/delete_survey/${surveyId}`, {
+        method: 'DELETE',
+        credentials: 'same-origin'
+    })
+    .then(response => response.json())
+    .then(data => {
+        if (data.success) {
+            loadSurveys();
+        } else {
+            alert('Hata: ' + data.error);
+        }
+    })
+    .catch(error => {
+        console.error('Error:', error);
+        alert('Silme işlemi sırasında bir hata oluştu.');
+    });
+}
+
+function viewSurveyResponses(surveyId) {
+    window.open(`/admin/survey_responses/${surveyId}`, '_blank');
+}
+
+function editSurvey(surveyId) {
+    // This would open an edit modal or redirect to edit page
+    alert('Düzenleme özelliği yakında eklenecek.');
+}
+</script>
+{% endblock %}

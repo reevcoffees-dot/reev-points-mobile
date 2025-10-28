@@ -1,0 +1,421 @@
+{% extends "base.html" %}
+
+{% block title %}{{ _('Campaigns') }}{% endblock %}
+
+{% block content %}
+<div class="container mt-4">
+    <div class="row">
+        <div class="col-12">
+            <div class="card">
+                <div class="card-header bg-primary text-white">
+                    <h4><i class="fas fa-tags"></i> {{ _('Active Campaigns') }}</h4>
+                    <small>{{ _("Don't miss current opportunities!") }}</small>
+                </div>
+                <div class="card-body">
+                    {% if campaigns_with_products %}
+                        <div class="row">
+                            {% for item in campaigns_with_products %}
+                            {% set campaign = item.campaign %}
+                            {% set products = item.products %}
+                            <div class="col-md-6 col-lg-4 mb-4">
+                                <div class="card h-100 shadow-sm">
+                                    {% if campaign.image_filename %}
+                                    <img src="{{ url_for('static', filename='uploads/' + campaign.image_filename) }}" 
+                                         class="card-img-top" alt="{{ campaign.title }}" style="height: 200px; object-fit: cover;">
+                                    {% else %}
+                                    <div class="card-img-top bg-gradient-primary d-flex align-items-center justify-content-center" style="height: 200px;">
+                                        <i class="fas fa-tags fa-4x text-white"></i>
+                                    </div>
+                                    {% endif %}
+                                    
+                                    <div class="card-body d-flex flex-column">
+                                        <h5 class="card-title text-primary">{{ campaign.title }}</h5>
+                                        <p class="card-text">{{ campaign.description }}</p>
+                                        
+                                      
+                                        <div class="mt-auto">
+                                            <div class="row text-center">
+                                                <div class="col-6">
+                                                    <small class="text-muted">
+                                                        <i class="fas fa-calendar-alt"></i> {{ _('Start') }}<br>
+                                                        <strong>{{ campaign.start_date.strftime('%d.%m.%Y') }}</strong>
+                                                    </small>
+                                                </div>
+                                                <div class="col-6">
+                                                    <small class="text-muted">
+                                                        <i class="fas fa-calendar-times"></i> {{ _('End') }}<br>
+                                                        <strong>{{ campaign.end_date.strftime('%d.%m.%Y') }}</strong>
+                                                    </small>
+                                                </div>
+                                            </div>
+                                            
+                                            <div class="text-center mt-3">
+                                                <span class="badge bg-success">
+                                                    <i class="fas fa-check-circle"></i> {{ _('Active Campaign') }}
+                                                </span>
+                                                {% if campaign.branches %}
+                                                <div class="mt-2">
+                                                    <small class="text-muted">
+                                                        <i class="fas fa-store"></i> {{ _('Valid Branches') }}:<br>
+                                                        {% for branch in campaign.branches %}
+                                                            <span class="badge bg-light text-dark me-1">{{ branch.name }}</span>
+                                                        {% endfor %}
+                                                    </small>
+                                                </div>
+                                                {% endif %}
+                                                
+                                                <!-- Kampanya QR Kod Oluşturma Butonu -->
+                                                {% if campaign.qr_enabled and campaign.can_be_used_by_customer(current_user.id) %}
+                                                <div class="mt-3">
+                                                    <button class="btn btn-warning btn-sm w-100" 
+                                                            data-campaign-id="{{ campaign.id }}" 
+                                                            data-campaign-title="{{ campaign.title }}"
+                                                            data-campaign-index="{{ loop.index0 }}"
+                                                            onclick="showProductSelectionModal(this)">
+                                                        <i class="fas fa-qrcode"></i> Kampanya QR Oluştur
+                                                    </button>
+                                                </div>
+                                                {% elif not campaign.qr_enabled %}
+                                                <div class="mt-3">
+                                                    <small class="text-muted">
+                                                        <i class="fas fa-info-circle"></i> {{ _('QR code not available for this campaign') }}
+                                                    </small>
+                                                </div>
+                                                {% else %}
+                                                <div class="mt-3">
+                                                    <small class="text-muted">
+                                                        <i class="fas fa-exclamation-triangle"></i> {{ _('Usage limit reached for this campaign') }}
+                                                    </small>
+                                                </div>
+                                                {% endif %}
+                                            </div>
+                                        </div>
+                                    </div>
+                                </div>
+                            </div>
+                            {% endfor %}
+                        </div>
+                    {% else %}
+                        <div class="text-center py-5">
+                            <i class="fas fa-tags fa-4x text-muted mb-3"></i>
+                            <h5 class="text-muted">{{ _('No active campaigns at the moment') }}</h5>
+                            <p class="text-muted">{{ _('Stay tuned for new campaigns!') }}</p>
+                            <a href="{{ url_for('dashboard') }}" class="btn btn-primary">
+                                <i class="fas fa-home"></i> {{ _('Back to Home') }}
+                            </a>
+                        </div>
+                    {% endif %}
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}
+
+{% block scripts %}
+<script>
+// Kampanya verileri
+window.campaignsData = [
+    {% for item in campaigns_with_products %}
+    {
+        "campaign_id": {{ item.campaign.id }},
+        "campaign_title": "{{ item.campaign.title|e }}",
+        "products": [
+            {% for product in item.products %}
+            {
+                "id": {% if product.source == 'existing_product' %}{{ product.id }}{% else %}"manual_{{ product.id }}"{% endif %},
+                "campaign_product_id": {{ product.campaign_product_id }},
+                "name": "{{ product.name|e }}",
+                "category": "{{ product.category|e }}",
+                "description": "{{ product.description|e if product.description else '' }}",
+                "original_points": {{ product.original_points }},
+                "discounted_points": {{ product.discounted_points }},
+                "discount": {{ product.discount }},
+                "discount_type": "{{ product.discount_type }}",
+                "image_filename": {% if product.image_filename %}"{{ product.image_filename }}"{% else %}null{% endif %},
+                "source": "{{ product.source }}"
+            }{% if not loop.last %},{% endif %}
+            {% endfor %}
+        ]
+    }{% if not loop.last %},{% endif %}
+    {% endfor %}
+];
+console.log('Campaigns data loaded:', window.campaignsData);
+
+// Kampanya QR Kod Oluşturma Modal
+let campaignQRModal;
+let productSelectionModal;
+
+// Modal HTML'lerini sayfaya ekle
+document.addEventListener('DOMContentLoaded', function() {
+    // Ürün Seçimi Modal'ı
+    const productSelectionModalHTML = `
+        <div class="modal fade" id="productSelectionModal" tabindex="-1" aria-labelledby="productSelectionModalLabel" aria-hidden="true">
+            <div class="modal-dialog modal-dialog-centered modal-lg">
+                <div class="modal-content">
+                    <div class="modal-header bg-primary text-white">
+                        <h5 class="modal-title" id="productSelectionModalLabel">
+                            <i class="fas fa-gift"></i> Ürün Seçimi
+                        </h5>
+                        <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal" aria-label="Close"></button>
+                    </div>
+                    <div class="modal-body">
+                        <div class="mb-3">
+                            <h6 class="text-muted">Kampanya için hangi ürünü seçmek istiyorsunuz?</h6>
+                            <small class="text-muted">Seçtiğiniz ürün QR kod okutulduğunda şube panelinde görünecektir.</small>
+                        </div>
+                        <div id="productSelectionContent">
+                            <!-- Ürünler burada listelenecek -->
+                        </div>
+                    </div>
+                    <div class="modal-footer">
+                        <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">İptal</button>
+                        <button type="button" class="btn btn-primary" id="confirmProductSelection" disabled>
+                            <i class="fas fa-qrcode"></i> QR Kod Oluştur
+                        </button>
+                    </div>
+                </div>
+            </div>
+        </div>
+    `;
+    
+    // QR Kod Modal'ı
+    const campaignQRModalHTML = `
+        <div class="modal fade" id="campaignQRModal" tabindex="-1" aria-labelledby="campaignQRModalLabel" aria-hidden="true">
+            <div class="modal-dialog modal-dialog-centered">
+                <div class="modal-content">
+                    <div class="modal-header bg-warning text-dark">
+                        <h5 class="modal-title" id="campaignQRModalLabel">
+                            <i class="fas fa-qrcode"></i> Kampanya QR Kodu
+                        </h5>
+                        <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+                    </div>
+                    <div class="modal-body text-center">
+                        <div id="campaignQRContent">
+                            <div class="spinner-border text-warning" role="status">
+                                <span class="visually-hidden">{{ _('Loading...') }}</span>
+                            </div>
+                            <p class="mt-2">{{ _('Generating QR code...') }}</p>
+                        </div>
+                    </div>
+                    <div class="modal-footer">
+                        <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">{{ _('Close') }}</button>
+                    </div>
+                </div>
+            </div>
+        </div>
+    `;
+    
+    document.body.insertAdjacentHTML('beforeend', productSelectionModalHTML);
+    document.body.insertAdjacentHTML('beforeend', campaignQRModalHTML);
+    
+    productSelectionModal = new bootstrap.Modal(document.getElementById('productSelectionModal'));
+    campaignQRModal = new bootstrap.Modal(document.getElementById('campaignQRModal'));
+});
+
+// Global değişkenler
+let currentCampaignData = {};
+let selectedProductId = null;
+
+// Ürün seçimi modal'ını göster
+function showProductSelectionModal(button) {
+    console.log('showProductSelectionModal çağrıldı');
+    const campaignId = button.getAttribute('data-campaign-id');
+    const campaignTitle = button.getAttribute('data-campaign-title');
+    const campaignIndex = parseInt(button.getAttribute('data-campaign-index'));
+    
+    console.log('Campaign ID:', campaignId, 'Index:', campaignIndex);
+    
+    // Global verilerden kampanya bilgisini al
+    if (!window.campaignsData || !window.campaignsData[campaignIndex]) {
+        console.error('Kampanya verileri bulunamadı');
+        alert('Kampanya verileri yüklenirken hata oluştu!');
+        return;
+    }
+    
+    const campaignProducts = window.campaignsData[campaignIndex].products;
+    console.log('Campaign products:', campaignProducts);
+    
+    // Global değişkenleri ayarla
+    currentCampaignData = {
+        id: campaignId,
+        title: campaignTitle,
+        products: campaignProducts,
+        button: button
+    };
+    
+    // Modal başlığını güncelle
+    document.getElementById('productSelectionModalLabel').innerHTML = `
+        <i class="fas fa-gift"></i> ${campaignTitle} - Ürün Seçimi
+    `;
+    
+    // Ürünleri listele
+    const productContent = document.getElementById('productSelectionContent');
+    let productsHTML = '<div class="row">';
+    
+    campaignProducts.forEach((product, index) => {
+        const productId = product.source === 'existing_product' ? product.id : `manual_${product.id}`;
+        const discountBadge = product.discount > 0 ? 
+            (product.discount_type === 'percentage' ? 
+                `<span class="badge bg-danger ms-1">-%${product.discount}%</span>` :
+                `<span class="badge bg-danger ms-1">-${product.discount}p</span>`) : '';
+        
+        productsHTML += `
+            <div class="col-md-6 mb-3">
+                <div class="card product-selection-card h-100" 
+                     data-product-id="${productId}" 
+                     data-campaign-product-id="${product.campaign_product_id}"
+                     onclick="selectProduct(this)">
+                    <div class="card-body p-3">
+                        <div class="d-flex align-items-center">
+                            ${product.image_filename ? 
+                                `<img src="/static/uploads/${product.image_filename}" class="rounded me-3" style="width: 50px; height: 50px; object-fit: cover;">` :
+                                `<div class="bg-secondary rounded me-3 d-flex align-items-center justify-content-center" style="width: 50px; height: 50px;">
+                                    <i class="fas fa-box text-white"></i>
+                                </div>`
+                            }
+                            <div class="flex-grow-1">
+                                <h6 class="mb-1">${product.name}</h6>
+                                <small class="text-muted">${product.category}</small>
+                                <div class="mt-1">
+                                    ${product.discount > 0 ? 
+                                        `<small class="text-decoration-line-through text-muted">${product.original_points}p</small>
+                                         <strong class="text-success ms-1">${product.discounted_points}p</strong>
+                                         ${discountBadge}` :
+                                        `<strong class="text-primary">${product.original_points}p</strong>`
+                                    }
+                                </div>
+                            </div>
+                            <div class="product-selection-check">
+                                <i class="fas fa-check-circle text-success" style="display: none;"></i>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        `;
+    });
+    
+    productsHTML += '</div>';
+    productContent.innerHTML = productsHTML;
+    
+    // Modal'ı göster
+    productSelectionModal.show();
+}
+
+// Ürün seçimi
+function selectProduct(card) {
+    // Tüm seçimleri temizle
+    document.querySelectorAll('.product-selection-card').forEach(c => {
+        c.classList.remove('border-primary', 'bg-light');
+        c.querySelector('.product-selection-check i').style.display = 'none';
+    });
+    
+    // Seçilen kartı vurgula
+    card.classList.add('border-primary', 'bg-light');
+    card.querySelector('.product-selection-check i').style.display = 'block';
+    
+    // Seçilen ürün ID'sini kaydet
+    selectedProductId = card.getAttribute('data-campaign-product-id');
+    
+    // Onay butonunu etkinleştir
+    document.getElementById('confirmProductSelection').disabled = false;
+}
+
+// Ürün seçimi onaylandığında QR kod oluştur
+document.addEventListener('DOMContentLoaded', function() {
+    document.getElementById('confirmProductSelection').addEventListener('click', function() {
+        if (!selectedProductId || !currentCampaignData.id) {
+            alert('Lütfen bir ürün seçiniz.');
+            return;
+        }
+        
+        // Ürün seçimi modal'ını kapat
+        productSelectionModal.hide();
+        
+        // QR kod oluşturma işlemini başlat
+        generateCampaignQR(currentCampaignData.id, currentCampaignData.title, selectedProductId);
+    });
+});
+
+function generateCampaignQR(campaignId, campaignTitle, selectedProductId) {
+    // QR Modal'ını göster
+    campaignQRModal.show();
+    
+    // QR kod oluştur
+    fetch(`/campaign/${campaignId}/generate_qr`, {
+        method: 'POST',
+        headers: {
+            'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({
+            selected_product_id: selectedProductId
+        })
+    })
+    .then(response => response.json())
+    .then(data => {
+        if (data.success) {
+            document.getElementById('campaignQRContent').innerHTML = `
+                <div class="campaign-qr-success">
+                    <h6 class="text-success mb-3">
+                        <i class="fas fa-check-circle"></i> QR Kod Başarıyla Oluşturuldu!
+                    </h6>
+                    <div class="campaign-info mb-3">
+                        <h6 class="text-primary">${campaignTitle}</h6>
+                        <div class="alert alert-info py-2">
+                            <small>
+                                <i class="fas fa-gift"></i> <strong>Seçilen Ürün:</strong> ${data.selected_product.name}
+                            </small>
+                        </div>
+                        <small class="text-muted">Bu QR kodu kasiyere gösterin</small>
+                    </div>
+                    <div class="qr-code-container mb-3">
+                        <img src="${data.qr_image}" alt="Kampanya QR Kodu" class="img-fluid" style="max-width: 250px;">
+                    </div>
+                    <div class="qr-code-text mb-3">
+                        <div class="card bg-light">
+                            <div class="card-body p-2">
+                                <small class="text-muted d-block mb-1">QR Kod İçeriği:</small>
+                                <code class="text-dark" style="font-size: 0.8em; word-break: break-all;">${data.qr_code}</code>
+                            </div>
+                        </div>
+                    </div>
+                    <div class="qr-details">
+                        <div class="alert alert-info">
+                            <small>
+                                <i class="fas fa-clock"></i> Son Kullanma: <strong>${data.expires_at}</strong><br>
+                                <i class="fas fa-info-circle"></i> Bu QR kod sadece bir kez kullanılabilir
+                            </small>
+                        </div>
+                    </div>
+                </div>
+            `;
+        } else {
+            document.getElementById('campaignQRContent').innerHTML = `
+                <div class="alert alert-danger">
+                    <i class="fas fa-exclamation-triangle"></i>
+                    <strong>Hata:</strong> ${data.error}
+                </div>
+            `;
+        }
+    })
+    .catch(error => {
+        console.error('Error:', error);
+        document.getElementById('campaignQRContent').innerHTML = `
+            <div class="alert alert-danger">
+                <i class="fas fa-exclamation-triangle"></i>
+                <strong>Hata:</strong> QR kod oluşturulurken bir hata oluştu
+            </div>
+        `;
+    })
+    .finally(() => {
+        // Seçimi sıfırla
+        selectedProductId = null;
+        currentCampaignData = {};
+        
+        // Onay butonunu devre dışı bırak
+        document.getElementById('confirmProductSelection').disabled = true;
+    });
+}
+</script>
+{% endblock %}

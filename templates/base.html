@@ -1,0 +1,507 @@
+<!DOCTYPE html>
+<html lang="tr">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <!-- Chrome kamera izni için güvenlik ayarları -->
+    <meta http-equiv="Permissions-Policy" content="camera=*">
+    <meta name="format-detection" content="telephone=no">
+    <meta name="mobile-web-app-capable" content="yes">
+    <meta name="apple-mobile-web-app-capable" content="yes">
+    <!-- Chrome için HTTP benzeri güvenlik -->
+    <!-- <meta http-equiv="Content-Security-Policy" content="upgrade-insecure-requests"> -->
+    <title>{% block title %}VEER POİNTS{% endblock %}</title>
+    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" rel="stylesheet">
+    <link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css" rel="stylesheet">
+    <style>
+        :root {
+            --primary-color: #8B4513;
+            --secondary-color: #D2691E;
+            --accent-color: #F4A460;
+            /* Global arka plan renkleri (dashboard ile uyumlu yeşil tonları) */
+            --bg-start: #a6dbb8;
+            --bg-end: #4d705c;
+            --card-bg: rgba(255, 255, 255, 0.7);
+            --card-border: rgba(255, 255, 255, 0.5);
+        }
+        
+        /* Modern arka plan: çok katmanlı gradient + yumuşak doku */
+        body {
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+            min-height: 100vh;
+            background-attachment: fixed;
+            background-image:
+                radial-gradient(1200px 600px at 0% 0%, rgba(22, 122, 59, 0.10), transparent 60%),
+                radial-gradient(800px 500px at 100% 0%, rgba(34, 197, 94, 0.10), transparent 60%),
+                linear-gradient(135deg, var(--bg-start) 0%, var(--bg-end) 100%);
+        }
+        
+        /* Hafif parıltı efekti */
+        body::before {
+            content: "";
+            position: fixed;
+            inset: 0;
+            background: radial-gradient(600px 400px at 70% 20%, rgba(255,255,255,0.5), transparent 60%);
+            pointer-events: none;
+            z-index: -1;
+        }
+        
+        .navbar {
+            background: rgba(104, 119, 112, 0.58) !important;
+            backdrop-filter: saturate(160%) blur(6px);
+            -webkit-backdrop-filter: saturate(160%) blur(6px);
+            box-shadow: 0 8px 20px rgba(0,0,0,0.08);
+            border-bottom: 1px solid rgba(255,255,255,0.35);
+        }
+        
+        .navbar-brand {
+            font-weight: bold;
+            font-size: 1.5rem;
+        }
+        
+        /* Cam efekti kartlar */
+        .card {
+            border: 1px solid var(--card-border);
+            border-radius: 16px;
+            background: var(--card-bg);
+            backdrop-filter: blur(8px) saturate(140%);
+            -webkit-backdrop-filter: blur(8px) saturate(140%);
+            box-shadow: 0 12px 40px rgba(0,0,0,0.08);
+            transition: transform 0.25s ease, box-shadow 0.25s ease;
+        }
+        
+        .card:hover {
+            transform: translateY(-4px);
+            box-shadow: 0 18px 60px rgba(0,0,0,0.12);
+        }
+        
+        .btn-primary {
+            background: linear-gradient(135deg, var(--primary-color) 0%, var(--secondary-color) 100%);
+            border: none;
+            border-radius: 25px;
+            padding: 10px 30px;
+            font-weight: 600;
+            transition: all 0.25s ease;
+        }
+        
+        .btn-primary:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 8px 20px rgba(139, 69, 19, 0.35);
+        }
+        
+        .alert {
+            border: none;
+            border-radius: 12px;
+            margin-bottom: 20px;
+            box-shadow: 0 6px 24px rgba(0,0,0,0.06);
+        }
+        
+        .points-badge {
+            background: linear-gradient(135deg, var(--accent-color) 0%, var(--secondary-color) 100%);
+            color: white;
+            padding: 8px 15px;
+            border-radius: 20px;
+            font-weight: bold;
+            display: inline-block;
+        }
+        
+        .transaction-item {
+            background: rgba(255,255,255,0.85);
+            border-radius: 12px;
+            padding: 15px;
+            margin-bottom: 10px;
+            border-left: 4px solid var(--primary-color);
+            box-shadow: 0 6px 18px rgba(0,0,0,0.06);
+        }
+        
+        .hero-section {
+            background: linear-gradient(135deg, var(--primary-color) 0%, var(--secondary-color) 100%);
+            color: white;
+            padding: 80px 0;
+            text-align: center;
+            border-radius: 16px;
+        }
+        
+        .feature-icon {
+            font-size: 3rem;
+            color: var(--primary-color);
+            margin-bottom: 20px;
+        }
+        
+        /* Ödül İlerleme Halkası (renk ve kalınlık ayarlanabilir) */
+        .reward-ring {
+            --ring-size: 160px;              /* halka çapı */
+            --ring-thickness: 12px;          /* halka kalınlığı */
+            --ring-color: var(--primary-color);
+            --ring-track: rgba(0,0,0,0.1);   /* arka plan rayı */
+            --percent: 0;                    /* 0..100 */
+            width: var(--ring-size);
+            height: var(--ring-size);
+            border-radius: 50%;
+            background: conic-gradient(var(--ring-color) calc(var(--percent) * 1%), var(--ring-track) 0);
+            position: relative;
+            display: inline-flex;
+            align-items: center;
+            justify-content: center;
+            box-shadow: 0 10px 30px rgba(0,0,0,0.08) inset;
+        }
+        .reward-ring .ring-center {
+            position: absolute;
+            inset: calc(var(--ring-thickness) + 8px);
+            background: rgba(255,255,255,0.85);
+            border-radius: 50%;
+            backdrop-filter: blur(4px);
+            -webkit-backdrop-filter: blur(4px);
+        }
+        .reward-ring .ring-content {
+            position: relative;
+            text-align: center;
+        }
+        @media (prefers-color-scheme: dark) {
+            .reward-ring {
+                --ring-track: rgba(255,255,255,0.12);
+            }
+            .reward-ring .ring-center { background: rgba(20,24,31,0.65); }
+        }
+        
+        /* Koyu mod desteği */
+        @media (prefers-color-scheme: dark) {
+            :root {
+                /* Koyu mod global arka plan renkleri */
+                --bg-start: #0e1512;
+                --bg-end: #0f1c16;
+                --card-bg: rgba(20, 24, 31, 0.55);
+                --card-border: rgba(255,255,255,0.08);
+            }
+            .points-badge { color: #fff; }
+        }
+    </style>
+</head>
+<body>
+    <!-- Intro (Splash) Ekranı: Sadece ilk girişte gösterilir -->
+    <div id="intro-overlay" style="display:none;">
+        <div class="intro-backdrop"></div>
+        <div class="intro-content">
+            <div class="intro-logo mb-3">
+                {% if site_logo and site_logo.value %}
+                    <img src="{{ url_for('static', filename='uploads/' + site_logo.value) }}" alt="Logo" />
+                {% else %}
+                    <i class="fas fa-mug-hot"></i>
+                {% endif %}
+            </div>
+            <h3 class="intro-title">REEV COFFEE</h3>
+            <p class="intro-subtitle">Sadakat Programına Hoş Geldiniz</p>
+            <button id="intro-skip" class="btn btn-light btn-sm mt-2">Geç</button>
+        </div>
+    </div>
+    <nav class="navbar navbar-expand-lg navbar-dark">
+        <div class="container">
+            <a class="navbar-brand" href="{{ url_for('index') }}">
+                {% if site_logo and site_logo.value %}
+                    <img src="{{ url_for('static', filename='uploads/' + site_logo.value) }}" 
+                         alt="Logo" 
+                         style="height: 40px; width: auto; max-width: 200px;">
+                {% else %}
+                    <i class="fas fa-coffee"></i> REEV COFFEE
+                {% endif %}
+            </a>
+            <button class="navbar-toggler" type="button" data-bs-toggle="collapse" data-bs-target="#navbarNav">
+                <span class="navbar-toggler-icon"></span>
+            </button>
+            <div class="collapse navbar-collapse" id="navbarNav">
+                <ul class="navbar-nav me-auto">
+                    {% if current_user.is_authenticated %}
+                        <li class="nav-item">
+                            <a class="nav-link" href="{{ url_for('dashboard') }}">
+                                <i class="fas fa-qrcode"></i> {{ _('Generate QR') }}
+                            </a>
+                        </li>
+                        <li class="nav-item">
+                            <a class="nav-link" href="{{ url_for('redeem_points') }}">
+                                <i class="fas fa-gift"></i> {{ _('Use Points') }}
+                            </a>
+                        </li>
+                        <li class="nav-item">
+                            <a class="nav-link" href="{{ url_for('campaigns') }}">
+                                <i class="fas fa-tags"></i> {{ _('Campaigns') }}
+                            </a>
+                        </li>
+                        <li class="nav-item">
+                            <a class="nav-link" href="{{ url_for('purchase_history') }}">
+                                <i class="fas fa-history"></i> {{ _('Purchase History') }}
+                            </a>
+                        </li>
+                        <li class="nav-item">
+                            <a class="nav-link" href="{{ url_for('branches') }}">
+                                <i class="fas fa-map-marker-alt"></i> {{ _('Our Branches') }}
+                            </a>
+                        </li>
+                        <li class="nav-item">
+                            <a class="nav-link" href="{{ url_for('profile') }}">
+                                <i class="fas fa-user"></i> {{ _('Profile') }}
+                            </a>
+                        </li>
+                        {% if current_user.is_admin %}
+                        <li class="nav-item">
+                            <a class="nav-link" href="{{ url_for('admin') }}">
+                                <i class="fas fa-cog"></i> {{ _('Admin') }}
+                            </a>
+                        </li>
+                        {% endif %}
+                    {% endif %}
+                </ul>
+                <ul class="navbar-nav">
+                    <!-- Messages/Notifications -->
+                    <li class="nav-item dropdown">
+                        {% with messages = get_flashed_messages(with_categories=true) %}
+                        <a class="nav-link dropdown-toggle position-relative" href="#" id="messagesDropdown" role="button" data-bs-toggle="dropdown" aria-expanded="false" aria-label="{{ _('Messages') }}">
+                            <i class="fas fa-bell text-white"></i>
+                            <span class="d-none d-lg-inline ms-1">{{ _('Messages') }}</span>
+                            {% if messages and messages|length > 0 %}
+                            <span class="position-absolute top-0 start-100 translate-middle badge rounded-pill bg-danger">
+                                {{ messages|length }}
+                            </span>
+                            {% endif %}
+                        </a>
+                        <ul class="dropdown-menu dropdown-menu-end" style="min-width: 300px;">
+                            <li><h6 class="dropdown-header">{{ _('Notifications') }}</h6></li>
+                            {% if messages and messages|length > 0 %}
+                                {% for category, message in messages %}
+                                    <li>
+                                        <div class="dropdown-item-text">
+                                            <div class="alert alert-{{ 'danger' if category == 'error' else category }} mb-0 py-2">
+                                                <i class="fas fa-{{ 'exclamation-triangle' if category == 'error' else 'check-circle' if category == 'success' else 'info-circle' }} me-2"></i>
+                                                <small>{{ message }}</small>
+                                            </div>
+                                        </div>
+                                    </li>
+                                    {% if not loop.last %}<li><hr class="dropdown-divider"></li>{% endif %}
+                                {% endfor %}
+                                <li><hr class="dropdown-divider"></li>
+                            {% else %}
+                                <li><span class="dropdown-item-text text-muted">{{ _('No notifications') }}</span></li>
+                                <li><hr class="dropdown-divider"></li>
+                            {% endif %}
+                            {% if current_user.is_authenticated %}
+                                <li>
+                                    <a class="dropdown-item" href="{{ url_for('messages') }}">
+                                        <i class="fas fa-envelope me-2"></i>{{ _('My Messages') }}
+                                        {% if unread_messages_count and unread_messages_count > 0 %}
+                                            <span class="badge bg-primary ms-2">{{ unread_messages_count }}</span>
+                                        {% endif %}
+                                    </a>
+                                </li>
+                                <li><hr class="dropdown-divider"></li>
+                                <li><h6 class="dropdown-header">{{ _('Notification Settings') }}</h6></li>
+                                <li>
+                                    <div class="dropdown-item-text">
+                                        <div id="notification-status" class="mb-2">
+                                            <small class="text-muted">{{ _('Status') }}: <span id="permission-status">{{ _('Checking...') }}</span></small>
+                                        </div>
+                                        <div class="d-grid gap-1">
+                                            <button id="enable-notifications" class="btn btn-sm btn-outline-success" style="display: none;" onclick="enableNotifications()">
+                                                <i class="fas fa-bell"></i> {{ _('Enable Notifications') }}
+                                            </button>
+                                            <button id="disable-notifications" class="btn btn-sm btn-outline-secondary" style="display: none;" onclick="disableNotifications()">
+                                                <i class="fas fa-bell-slash"></i> {{ _('Disable Notifications') }}
+                                            </button>
+                                            <button id="test-notification" class="btn btn-sm btn-outline-info" style="display: none;" onclick="testNotification()">
+                                                <i class="fas fa-vial"></i> {{ _('Test Notification') }}
+                                            </button>
+                                        </div>
+                                    </div>
+                                </li>
+                            {% endif %}
+                        </ul>
+                        {% endwith %}
+                    </li>
+                    
+                    <!-- Dil Seçimi -->
+                    <li class="nav-item dropdown">
+                        <a class="nav-link dropdown-toggle" href="#" id="languageDropdown" role="button" data-bs-toggle="dropdown" aria-expanded="false">
+                            <i class="fas fa-globe"></i>
+                            {% if get_locale() == 'tr' %}🇹🇷 TR
+                            {% elif get_locale() == 'en' %}🇺🇸 EN
+                            {% elif get_locale() == 'ru' %}🇷🇺 RU
+                            {% elif get_locale() == 'de' %}🇩🇪 DE
+                            {% endif %}
+                        </a>
+                        <ul class="dropdown-menu">
+                            <li><a class="dropdown-item" href="{{ url_for('set_language', language='tr') }}">🇹🇷 {{ _('Turkish') }}</a></li>
+                            <li><a class="dropdown-item" href="{{ url_for('set_language', language='en') }}">🇺🇸 {{ _('English') }}</a></li>
+                            <li><a class="dropdown-item" href="{{ url_for('set_language', language='ru') }}">🇷🇺 {{ _('Russian') }}</a></li>
+                            <li><a class="dropdown-item" href="{{ url_for('set_language', language='de') }}">🇩🇪 {{ _('German') }}</a></li>
+                        </ul>
+                    </li>
+                    
+                    {% if current_user.is_authenticated %}
+                        <li class="nav-item">
+                            <span class="navbar-text me-3">{{ _('Welcome back') }}, {{ current_user.name }}!</span>
+                        </li>
+                        <li class="nav-item">
+                            <a class="nav-link" href="{{ url_for('logout') }}">
+                                <i class="fas fa-sign-out-alt"></i> {{ _('Logout') }}
+                            </a>
+                        </li>
+                    {% else %}
+                        <li class="nav-item">
+                            <a class="nav-link" href="{{ url_for('login') }}">
+                                <i class="fas fa-sign-in-alt"></i> {{ _('Login') }}
+                            </a>
+                        </li>
+                        <li class="nav-item">
+                            <a class="nav-link" href="{{ url_for('register') }}">
+                                <i class="fas fa-user-plus"></i> {{ _('Register') }}
+                            </a>
+                        </li>
+                        <li class="nav-item">
+                            <a class="nav-link" href="{{ url_for('branch_login') }}">
+                                <i class="fas fa-store"></i> {{ _('Branch Login') }}
+                            </a>
+                        </li>
+                    {% endif %}
+                </ul>
+            </div>
+        </div>
+    </nav>
+
+    <main>
+        {% block content %}{% endblock %}
+    </main>
+
+    <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.1.3/dist/js/bootstrap.bundle.min.js"></script>
+    <script src="{{ url_for('static', filename='js/notifications.js') }}"></script>
+    
+    <script>
+    // Intro overlay stilleri (inline, hızlı uygulama için)
+    (function(){
+        const css = `
+        #intro-overlay { position: fixed; inset: 0; z-index: 2000; display: none; }
+        #intro-overlay.active { display: block; animation: introFadeIn .4s ease forwards; }
+        #intro-overlay .intro-backdrop { position:absolute; inset:0; background:
+            radial-gradient(1000px 600px at 0% 0%, rgba(34, 197, 94, 0.12), transparent 60%),
+            radial-gradient(800px 500px at 100% 0%, rgba(22, 122, 59, 0.12), transparent 60%),
+            linear-gradient(135deg, var(--bg-start) 0%, var(--bg-end) 100%);
+            filter: blur(0px);
+        }
+        #intro-overlay .intro-content { position: relative; height: 100%; display:flex; flex-direction:column; align-items:center; justify-content:center; text-align:center; color:#fff; }
+        #intro-overlay .intro-logo { width: 120px; height:120px; display:grid; place-items:center; border-radius:50%; background: rgba(255,255,255,0.2); backdrop-filter: blur(6px); box-shadow: 0 10px 40px rgba(0,0,0,0.15); }
+        #intro-overlay .intro-logo img { width: 80px; height:auto; object-fit:contain; filter: drop-shadow(0 4px 12px rgba(0,0,0,.25)); }
+        #intro-overlay .intro-logo i { font-size: 48px; }
+        #intro-overlay .intro-title { margin: 0; font-weight: 800; letter-spacing: 0.5px; text-shadow: 0 4px 18px rgba(0,0,0,.35); }
+        #intro-overlay .intro-subtitle { opacity: .9; margin-top: 6px; }
+        #intro-overlay .btn { border-radius: 999px; padding: 6px 16px; }
+        @keyframes introFadeIn { from { opacity: 0 } to { opacity: 1 } }
+        @keyframes introFadeOut { from { opacity: 1 } to { opacity: 0 } }
+        `;
+        const styleTag = document.createElement('style');
+        styleTag.innerHTML = css;
+        document.head.appendChild(styleTag);
+    })();
+
+    // Intro overlay davranışı
+    (function(){
+        const STORAGE_KEY = 'site_intro_seen_v1';
+        const overlay = document.getElementById('intro-overlay');
+        const skipBtn = document.getElementById('intro-skip');
+        const seen = localStorage.getItem(STORAGE_KEY) === '1';
+        if (!seen) {
+            // Göster ve 2 saniye sonra otomatik kapat
+            overlay.classList.add('active');
+            let closeTimer = setTimeout(closeIntro, 2000);
+            function closeIntro(){
+                overlay.style.animation = 'introFadeOut .35s ease forwards';
+                setTimeout(()=>{ overlay.style.display = 'none'; }, 320);
+                localStorage.setItem(STORAGE_KEY, '1');
+                if (closeTimer) { clearTimeout(closeTimer); closeTimer = null; }
+            }
+            skipBtn.addEventListener('click', closeIntro);
+            overlay.addEventListener('click', (e)=>{ if(e.target === overlay) closeIntro(); });
+            document.addEventListener('keydown', (e)=>{ if(e.key === 'Escape') closeIntro(); }, { once:true });
+        }
+    })();
+    
+    // Bildirim yönetimi fonksiyonları
+    async function updateNotificationStatus() {
+        if (!window.notificationManager) {
+            return;
+        }
+        
+        const status = window.notificationManager.getPermissionStatus();
+        const statusElement = document.getElementById('permission-status');
+        const enableBtn = document.getElementById('enable-notifications');
+        const disableBtn = document.getElementById('disable-notifications');
+        const testBtn = document.getElementById('test-notification');
+        
+        if (!statusElement) return; // Element yoksa çık
+        
+        if (status === 'not-supported') {
+            statusElement.textContent = 'Bu tarayıcıda desteklenmiyor';
+            statusElement.className = 'text-muted';
+        } else if (status === 'granted') {
+            statusElement.textContent = 'Aktif';
+            statusElement.className = 'text-success';
+            if (enableBtn) enableBtn.style.display = 'none';
+            if (disableBtn) disableBtn.style.display = 'block';
+            if (testBtn) testBtn.style.display = 'block';
+        } else if (status === 'denied') {
+            statusElement.textContent = 'Reddedildi';
+            statusElement.className = 'text-danger';
+            if (enableBtn) enableBtn.style.display = 'none';
+            if (disableBtn) disableBtn.style.display = 'none';
+            if (testBtn) testBtn.style.display = 'none';
+        } else {
+            statusElement.textContent = 'Pasif';
+            statusElement.className = 'text-warning';
+            if (enableBtn) enableBtn.style.display = 'block';
+            if (disableBtn) disableBtn.style.display = 'none';
+            if (testBtn) testBtn.style.display = 'none';
+        }
+    }
+
+    async function enableNotifications() {
+        try {
+            await window.notificationManager.requestPermission();
+            updateNotificationStatus();
+            alert('Bildirimler başarıyla etkinleştirildi! 🔔');
+        } catch (error) {
+            console.error('Bildirim etkinleştirme hatası:', error);
+            alert('Bildirimler etkinleştirilemedi: ' + error.message);
+            updateNotificationStatus();
+        }
+    }
+
+    async function disableNotifications() {
+        try {
+            await window.notificationManager.unsubscribe();
+            updateNotificationStatus();
+            alert('Bildirimler devre dışı bırakıldı.');
+        } catch (error) {
+            console.error('Bildirim devre dışı bırakma hatası:', error);
+            alert('Bildirimler devre dışı bırakılamadı: ' + error.message);
+        }
+    }
+
+    async function testNotification() {
+        try {
+            await window.notificationManager.sendTestNotification();
+            alert('Test bildirimi gönderildi! 📱');
+        } catch (error) {
+            console.error('Test bildirimi hatası:', error);
+            alert('Test bildirimi gönderilemedi: ' + error.message);
+        }
+    }
+
+    // Sayfa yüklendiğinde bildirim durumunu kontrol et
+    document.addEventListener('DOMContentLoaded', function() {
+        // Biraz bekle ki notificationManager yüklensin
+        setTimeout(updateNotificationStatus, 1000);
+    });
+    </script>
+    
+    {% block scripts %}{% endblock %}
+    <script src="https://cdn.jsdelivr.net/npm/jsqr@1.4.0/dist/jsQR.js" 
+            onload="console.log('✅ jsQR kütüphanesi yüklendi')" 
+            onerror="console.error('❌ jsQR kütüphanesi yüklenemedi')"></script>
+    <script src="{{ url_for('static', filename='js/simple_qr_scanner.js') }}"></script>
+</html>

@@ -1,0 +1,149 @@
+{% extends "base.html" %}
+
+{% block title %}{{ _('Our Branches') }} - Cafe Sadakat{% endblock %}
+
+{% block content %}
+<div class="container mt-4">
+    <div class="row">
+        <div class="col-12">
+            <div class="hero-section rounded mb-4">
+                <div class="container">
+                    <h1><i class="fas fa-map-marker-alt"></i> {{ _('Our Branches') }}</h1>
+                    <p class="lead">{{ _('You can find the same quality service and taste in all our branches') }}</p>
+                </div>
+            </div>
+        </div>
+    </div>
+    
+    <div class="row">
+        {% if branches %}
+            {% for branch in branches %}
+            <div class="col-md-6 col-lg-4 mb-4">
+                <div class="card h-100">
+                    {% if branch.image %}
+                    <img src="{{ url_for('static', filename='uploads/' + branch.image) }}" 
+                         class="card-img-top" 
+                         alt="{{ branch.name }}" 
+                         style="height: 200px; object-fit: cover;"
+                         onerror="console.log('Görsel yüklenemedi: {{ branch.image }}'); this.style.display='none'; this.nextElementSibling.style.display='flex';">
+                    <div class="card-img-top bg-light align-items-center justify-content-center" style="height: 200px; display: none;">
+                        <i class="fas fa-store fa-4x text-muted"></i>
+                        <small class="text-muted mt-2">{{ _('Image not found') }}</small>
+                    </div>
+                    {% else %}
+                    <div class="card-img-top bg-light d-flex align-items-center justify-content-center" style="height: 200px;">
+                        <i class="fas fa-store fa-4x text-muted"></i>
+                    </div>
+                    {% endif %}
+                    <div class="card-header bg-primary text-white">
+                        <h5 class="card-title mb-0">
+                            <i class="fas fa-store"></i> {{ branch.name }}
+                        </h5>
+                    </div>
+                    <div class="card-body">
+                        
+                        <div class="mb-3">
+                            <h6><i class="fas fa-map-marker-alt text-danger"></i> {{ _('Address') }}:</h6>
+                            <p class="text-muted">{{ branch.address }}</p>
+                        </div>
+                        
+                        {% if branch.phone %}
+                        <div class="mb-3">
+                            <h6><i class="fas fa-phone text-success"></i> {{ _('Phone') }}:</h6>
+                            <p class="text-muted">
+                                <a href="tel:{{ branch.phone }}" class="text-decoration-none">
+                                    {{ branch.phone }}
+                                </a>
+                            </p>
+                        </div>
+                        {% endif %}
+                        
+                        
+                        {% if branch.working_hours %}
+                        <div class="mb-3">
+                            <h6><i class="fas fa-clock text-warning"></i> {{ _('Working Hours') }}:</h6>
+                            <p class="text-muted">{{ branch.working_hours }}</p>
+                        </div>
+                        {% endif %}
+                        
+                        <div class="text-center">
+                            <span class="badge bg-success">
+                                <i class="fas fa-check-circle"></i> {{ _('Active Branch') }}
+                            </span>
+                        </div>
+                    </div>
+                    <div class="card-footer bg-light">
+                        <div class="row">
+                            {% if branch.phone %}
+                            <div class="col-6">
+                                <a href="tel:{{ branch.phone }}" class="btn btn-outline-success btn-sm w-100">
+                                    <i class="fas fa-phone"></i> {{ _('Call') }}
+                                </a>
+                            </div>
+                            {% endif %}
+                            <div class="col-{{ '6' if branch.phone else '12' }}">
+                                <button class="btn btn-outline-primary btn-sm w-100" onclick="showOnMap('{{ branch.address }}')">
+                                    <i class="fas fa-map"></i> {{ _('Show on Map') }}
+                                </button>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+            {% endfor %}
+        {% else %}
+            <div class="col-12">
+                <div class="card">
+                    <div class="card-body text-center py-5">
+                        <i class="fas fa-store fa-4x text-muted mb-3"></i>
+                        <h4 class="text-muted">{{ _('No Branches Yet') }}</h4>
+                        <p class="text-muted">{{ _('We will be at your service with our new branches soon!') }}</p>
+                    </div>
+                </div>
+            </div>
+        {% endif %}
+    </div>
+    
+    {% if branches %}
+    <div class="row mt-4">
+        <div class="col-12">
+            <div class="card">
+                <div class="card-header">
+                    <h5><i class="fas fa-info-circle"></i> {{ _('Information') }}</h5>
+                </div>
+                <div class="card-body">
+                    <div class="row">
+                        <div class="col-md-4 text-center mb-3">
+                            <i class="fas fa-qrcode fa-3x text-primary mb-2"></i>
+                            <h6>{{ _('Earn Points with QR Code') }}</h6>
+                            <p class="text-muted small">{{ _('You can earn points by scanning your QR code at all our branches') }}</p>
+                        </div>
+                        <div class="col-md-4 text-center mb-3">
+                            <i class="fas fa-gift fa-3x text-success mb-2"></i>
+                            <h6>{{ _('Use Points') }}</h6>
+                            <p class="text-muted small">{{ _('You can use your accumulated points at all our branches') }}</p>
+                        </div>
+                        <div class="col-md-4 text-center mb-3">
+                            <i class="fas fa-star fa-3x text-warning mb-2"></i>
+                            <h6>{{ _('Same Quality') }}</h6>
+                            <p class="text-muted small">{{ _('Whichever branch you go to, you get the same quality service') }}</p>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+    {% endif %}
+</div>
+{% endblock %}
+
+{% block scripts %}
+<script>
+function showOnMap(address) {
+    // Google Maps'te adresi aç
+    const encodedAddress = encodeURIComponent(address);
+    const mapsUrl = `https://www.google.com/maps/search/?api=1&query=${encodedAddress}`;
+    window.open(mapsUrl, '_blank');
+}
+</script>
+{% endblock %}

@@ -1,0 +1,59 @@
+{% extends "base.html" %}
+
+{% block title %}QR Kod Okut - Cafe Sadakat{% endblock %}
+
+{% block content %}
+<div class="container mt-4">
+    <div class="row justify-content-center">
+        <div class="col-md-8">
+            <div class="card">
+                <div class="card-header text-center bg-primary text-white">
+                    <h4><i class="fas fa-qrcode"></i> QR Kod Okut</h4>
+                </div>
+                <div class="card-body">
+                    <div class="text-center mb-4">
+                        <i class="fas fa-qrcode fa-5x text-primary mb-3"></i>
+                        <p class="lead">Alışveriş fişinizdeki QR kodu okutarak puan kazanın!</p>
+                    </div>
+                    
+                    <form method="POST">
+                        <div class="mb-3">
+                            <label for="qr_code" class="form-label">QR Kod</label>
+                            <input type="text" class="form-control form-control-lg text-center" 
+                                   id="qr_code" name="qr_code" 
+                                   placeholder="QR kod buraya yazın veya okutun" 
+                                   required autofocus>
+                            <div class="form-text">
+                                QR kodu manuel olarak girebilir veya kamera ile okutabilirsiniz.
+                            </div>
+                        </div>
+                        
+                        <div class="d-grid">
+                            <button type="submit" class="btn btn-primary btn-lg">
+                                <i class="fas fa-star"></i> Puan Kazan
+                            </button>
+                        </div>
+                    </form>
+                    
+                </div>
+            </div>
+            
+            <div class="card mt-4">
+                <div class="card-body">
+                    <h5 class="card-title">
+                        <i class="fas fa-info-circle text-info"></i> Nasıl Kullanılır?
+                    </h5>
+                    <ol>
+                        <li>Alışveriş yaptıktan sonra kasiyerden QR kodlu fiş isteyin</li>
+                        <li>QR kodu yukarıdaki alana yazın veya kamera ile okutun</li>
+                        <li>Anında puan kazanın! (Her 1 ₺ = 1 puan)</li>
+                        <li>Puanlarınızı sonraki alışverişlerinizde indirim olarak kullanın</li>
+                    </ol>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}
+
+{% endblock %}

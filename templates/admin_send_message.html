@@ -1,0 +1,212 @@
+{% extends "base.html" %}
+
+{% block title %}{{ _('Send Message') }} - Admin Panel{% endblock %}
+
+{% block content %}
+<div class="container mt-4">
+    <div class="row">
+        <div class="col-md-12">
+            <div class="card">
+                <div class="card-header">
+                    <h5><i class="fas fa-paper-plane"></i> {{ _('Send Message to Customers') }}</h5>
+                </div>
+                <div class="card-body">
+                    <form id="messageForm">
+                        <div class="row">
+                            <div class="col-md-6">
+                                <div class="mb-3">
+                                    <label for="messageTitle" class="form-label">{{ _('Message Title') }}</label>
+                                    <input type="text" class="form-control" id="messageTitle" name="title" required>
+                                </div>
+                                
+                                <div class="mb-3">
+                                    <label for="messageContent" class="form-label">{{ _('Message Content') }}</label>
+                                    <textarea class="form-control" id="messageContent" name="content" rows="8" required></textarea>
+                                </div>
+                                
+                                <div class="mb-3">
+                                    <button type="button" class="btn btn-primary" onclick="sendMessage()">
+                                        <i class="fas fa-paper-plane"></i> {{ _('Send Message') }}
+                                    </button>
+                                    <button type="button" class="btn btn-secondary ms-2" onclick="selectAllCustomers()">
+                                        <i class="fas fa-check-square"></i> {{ _('Select All') }}
+                                    </button>
+                                    <button type="button" class="btn btn-outline-secondary ms-2" onclick="deselectAllCustomers()">
+                                        <i class="fas fa-square"></i> {{ _('Deselect All') }}
+                                    </button>
+                                </div>
+                            </div>
+                            
+                            <div class="col-md-6">
+                                <div class="mb-3">
+                                    <label class="form-label">{{ _('Select Recipients') }}</label>
+                                    <div class="border rounded p-3" style="max-height: 400px; overflow-y: auto;">
+                                        {% if customers %}
+                                            <div class="mb-2">
+                                                <input type="text" class="form-control form-control-sm" id="customerSearch" 
+                                                       placeholder="{{ _('Search customers...') }}" onkeyup="filterCustomers()">
+                                            </div>
+                                            {% for customer in customers %}
+                                            <div class="form-check customer-item" data-name="{{ customer.name.lower() }}" data-email="{{ customer.email.lower() }}">
+                                                <input class="form-check-input customer-checkbox" type="checkbox" 
+                                                       value="{{ customer.id }}" id="customer{{ customer.id }}">
+                                                <label class="form-check-label" for="customer{{ customer.id }}">
+                                                    <strong>{{ customer.name }}</strong><br>
+                                                    <small class="text-muted">{{ customer.email }}</small><br>
+                                                    <small class="text-info">
+                                                        <i class="fas fa-star"></i> {{ customer.points }} {{ _('points') }} | 
+                                                        <i class="fas fa-calendar"></i> {{ customer.created_at.strftime('%d.%m.%Y') }}
+                                                    </small>
+                                                </label>
+                                            </div>
+                                            <hr class="my-2">
+                                            {% endfor %}
+                                        {% else %}
+                                            <p class="text-muted text-center">{{ _('No customers found') }}</p>
+                                        {% endif %}
+                                    </div>
+                                </div>
+                                
+                                <div class="alert alert-info">
+                                    <i class="fas fa-info-circle"></i>
+                                    <strong>{{ _('Selected') }}:</strong> <span id="selectedCount">0</span> {{ _('customers') }}
+                                </div>
+                            </div>
+                        </div>
+                    </form>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- Success Modal -->
+<div class="modal fade" id="successModal" tabindex="-1" aria-labelledby="successModalLabel" aria-hidden="true">
+    <div class="modal-dialog">
+        <div class="modal-content">
+            <div class="modal-header bg-success text-white">
+                <h5 class="modal-title" id="successModalLabel">
+                    <i class="fas fa-check-circle"></i> {{ _('Success') }}
+                </h5>
+                <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal" aria-label="Close"></button>
+            </div>
+            <div class="modal-body">
+                <p id="successMessage"></p>
+            </div>
+            <div class="modal-footer">
+                <button type="button" class="btn btn-success" data-bs-dismiss="modal">{{ _('OK') }}</button>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}
+
+{% block scripts %}
+<script>
+function updateSelectedCount() {
+    const checkboxes = document.querySelectorAll('.customer-checkbox:checked');
+    document.getElementById('selectedCount').textContent = checkboxes.length;
+}
+
+function selectAllCustomers() {
+    const checkboxes = document.querySelectorAll('.customer-checkbox');
+    checkboxes.forEach(cb => {
+        if (cb.closest('.customer-item').style.display !== 'none') {
+            cb.checked = true;
+        }
+    });
+    updateSelectedCount();
+}
+
+function deselectAllCustomers() {
+    const checkboxes = document.querySelectorAll('.customer-checkbox');
+    checkboxes.forEach(cb => cb.checked = false);
+    updateSelectedCount();
+}
+
+function filterCustomers() {
+    const searchTerm = document.getElementById('customerSearch').value.toLowerCase();
+    const customerItems = document.querySelectorAll('.customer-item');
+    
+    customerItems.forEach(item => {
+        const name = item.getAttribute('data-name');
+        const email = item.getAttribute('data-email');
+        
+        if (name.includes(searchTerm) || email.includes(searchTerm)) {
+            item.style.display = 'block';
+        } else {
+            item.style.display = 'none';
+            // Gizlenen müşterilerin seçimini kaldır
+            const checkbox = item.querySelector('.customer-checkbox');
+            if (checkbox) checkbox.checked = false;
+        }
+    });
+    
+    updateSelectedCount();
+}
+
+function sendMessage() {
+    const title = document.getElementById('messageTitle').value.trim();
+    const content = document.getElementById('messageContent').value.trim();
+    const selectedCheckboxes = document.querySelectorAll('.customer-checkbox:checked');
+    
+    if (!title) {
+        alert('{{ _("Please enter a message title") }}');
+        return;
+    }
+    
+    if (!content) {
+        alert('{{ _("Please enter message content") }}');
+        return;
+    }
+    
+    if (selectedCheckboxes.length === 0) {
+        alert('{{ _("Please select at least one recipient") }}');
+        return;
+    }
+    
+    const recipientIds = Array.from(selectedCheckboxes).map(cb => parseInt(cb.value));
+    
+    // Gönderme işlemi
+    fetch('/admin/send_message', {
+        method: 'POST',
+        headers: {
+            'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({
+            title: title,
+            content: content,
+            recipient_ids: recipientIds
+        }),
+        credentials: 'same-origin'
+    })
+    .then(response => response.json())
+    .then(data => {
+        if (data.success) {
+            // Başarı modalını göster
+            document.getElementById('successMessage').textContent = data.message;
+            const modal = new bootstrap.Modal(document.getElementById('successModal'));
+            modal.show();
+            
+            // Formu temizle
+            document.getElementById('messageForm').reset();
+            deselectAllCustomers();
+        } else {
+            alert('{{ _("Error") }}: ' + data.error);
+        }
+    })
+    .catch(error => {
+        console.error('Mesaj gönderme hatası:', error);
+        alert('{{ _("An error occurred while sending the message") }}');
+    });
+}
+
+// Checkbox değişikliklerini dinle
+document.addEventListener('DOMContentLoaded', function() {
+    const checkboxes = document.querySelectorAll('.customer-checkbox');
+    checkboxes.forEach(cb => {
+        cb.addEventListener('change', updateSelectedCount);
+    });
+});
+</script>
+{% endblock %}

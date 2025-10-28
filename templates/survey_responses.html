@@ -1,0 +1,207 @@
+{% extends "base.html" %}
+
+{% block title %}Anket Yanıtları - {{ survey.title }}{% endblock %}
+
+{% block content %}
+<div class="container mt-4">
+    <div class="row">
+        <div class="col-12">
+            <div class="card">
+                <div class="card-header bg-primary text-white">
+                    <div class="d-flex justify-content-between align-items-center">
+                        <h4><i class="fas fa-chart-bar"></i> Anket Yanıtları</h4>
+                        <a href="{{ url_for('admin') }}" class="btn btn-light btn-sm">
+                            <i class="fas fa-arrow-left"></i> Admin Paneline Dön
+                        </a>
+                    </div>
+                </div>
+                <div class="card-body">
+                    <!-- Survey Info -->
+                    <div class="row mb-4">
+                        <div class="col-md-8">
+                            <h5>{{ survey.title }}</h5>
+                            <p class="text-muted">{{ survey.description }}</p>
+                        </div>
+                        <div class="col-md-4">
+                            <div class="text-end">
+                                <div class="badge bg-info fs-6 mb-2">
+                                    {{ responses|length }} Yanıt
+                                </div>
+                                <br>
+                                <small class="text-muted">
+                                    {{ survey.start_date.strftime('%d.%m.%Y') }} - 
+                                    {{ survey.end_date.strftime('%d.%m.%Y') }}
+                                </small>
+                            </div>
+                        </div>
+                    </div>
+
+                    {% if responses %}
+                        <!-- Survey Statistics -->
+                        <div class="row mb-4">
+                            <div class="col-12">
+                                <h6><i class="fas fa-chart-pie"></i> İstatistikler</h6>
+                                
+                                {% for question in survey.questions %}
+                                <div class="card mb-3">
+                                    <div class="card-header">
+                                        <strong>{{ question.question_text }}</strong>
+                                        <span class="badge bg-secondary ms-2">{{ question.question_type }}</span>
+                                    </div>
+                                    <div class="card-body">
+                                        {% if question.question_type == 'rating' %}
+                                            <!-- Rating Statistics -->
+                                            {% set rating_counts = {} %}
+                                            {% for response in responses %}
+                                                {% for answer in response.answers %}
+                                                    {% if answer.question_id == question.id and answer.answer_rating %}
+                                                        {% set _ = rating_counts.update({answer.answer_rating: rating_counts.get(answer.answer_rating, 0) + 1}) %}
+                                                    {% endif %}
+                                                {% endfor %}
+                                            {% endfor %}
+                                            
+                                            <div class="row">
+                                                {% for rating in range(1, 6) %}
+                                                <div class="col">
+                                                    <div class="text-center">
+                                                        <div class="h4 text-primary">{{ rating_counts.get(rating, 0) }}</div>
+                                                        <div class="small">
+                                                            {% for i in range(rating) %}⭐{% endfor %}
+                                                        </div>
+                                                    </div>
+                                                </div>
+                                                {% endfor %}
+                                            </div>
+                                            
+                                            {% set total_ratings = rating_counts.values() | sum %}
+                                            {% if total_ratings > 0 %}
+                                                {% set avg_rating = (rating_counts.get(1, 0) * 1 + rating_counts.get(2, 0) * 2 + rating_counts.get(3, 0) * 3 + rating_counts.get(4, 0) * 4 + rating_counts.get(5, 0) * 5) / total_ratings %}
+                                                <div class="mt-3 text-center">
+                                                    <span class="badge bg-success">Ortalama: {{ "%.1f"|format(avg_rating) }}/5</span>
+                                                </div>
+                                            {% endif %}
+                                            
+                                        {% elif question.question_type == 'yes_no' %}
+                                            <!-- Yes/No Statistics -->
+                                            {% set yes_count = 0 %}
+                                            {% set no_count = 0 %}
+                                            {% for response in responses %}
+                                                {% for answer in response.answers %}
+                                                    {% if answer.question_id == question.id %}
+                                                        {% if answer.answer_boolean == true %}
+                                                            {% set yes_count = yes_count + 1 %}
+                                                        {% elif answer.answer_boolean == false %}
+                                                            {% set no_count = no_count + 1 %}
+                                                        {% endif %}
+                                                    {% endif %}
+                                                {% endfor %}
+                                            {% endfor %}
+                                            
+                                            <div class="row">
+                                                <div class="col-6 text-center">
+                                                    <div class="h4 text-success">{{ yes_count }}</div>
+                                                    <div class="small">Evet</div>
+                                                </div>
+                                                <div class="col-6 text-center">
+                                                    <div class="h4 text-danger">{{ no_count }}</div>
+                                                    <div class="small">Hayır</div>
+                                                </div>
+                                            </div>
+                                            
+                                        {% elif question.question_type == 'multiple_choice' %}
+                                            <!-- Multiple Choice Statistics -->
+                                            {% set choice_counts = {} %}
+                                            {% for response in responses %}
+                                                {% for answer in response.answers %}
+                                                    {% if answer.question_id == question.id and answer.answer_choice %}
+                                                        {% set _ = choice_counts.update({answer.answer_choice: choice_counts.get(answer.answer_choice, 0) + 1}) %}
+                                                    {% endif %}
+                                                {% endfor %}
+                                            {% endfor %}
+                                            
+                                            {% for choice, count in choice_counts.items() %}
+                                            <div class="d-flex justify-content-between align-items-center mb-2">
+                                                <span>{{ choice }}</span>
+                                                <span class="badge bg-primary">{{ count }}</span>
+                                            </div>
+                                            {% endfor %}
+                                            
+                                        {% elif question.question_type == 'text' %}
+                                            <!-- Text Responses -->
+                                            <div class="small text-muted">
+                                                {{ responses|length }} metin yanıtı alındı. Detayları aşağıdaki tabloda görebilirsiniz.
+                                            </div>
+                                        {% endif %}
+                                    </div>
+                                </div>
+                                {% endfor %}
+                            </div>
+                        </div>
+
+                        <!-- Detailed Responses -->
+                        <div class="row">
+                            <div class="col-12">
+                                <h6><i class="fas fa-list"></i> Detaylı Yanıtlar</h6>
+                                <div class="table-responsive">
+                                    <table class="table table-striped">
+                                        <thead>
+                                            <tr>
+                                                <th>Kullanıcı</th>
+                                                <th>Tarih</th>
+                                                {% for question in survey.questions %}
+                                                <th>{{ question.question_text[:30] }}{% if question.question_text|length > 30 %}...{% endif %}</th>
+                                                {% endfor %}
+                                            </tr>
+                                        </thead>
+                                        <tbody>
+                                            {% for response in responses %}
+                                            <tr>
+                                                <td>{{ response.user.name if response.user else 'Bilinmeyen' }}</td>
+                                                <td>{{ response.completed_at.strftime('%d.%m.%Y %H:%M') if response.completed_at else '-' }}</td>
+                                                {% for question in survey.questions %}
+                                                    {% set answer = response.answers | selectattr('question_id', 'equalto', question.id) | first %}
+                                                    <td>
+                                                        {% if answer %}
+                                                            {% if question.question_type == 'rating' %}
+                                                                {% if answer.answer_rating %}
+                                                                    {% for i in range(answer.answer_rating) %}⭐{% endfor %}
+                                                                    ({{ answer.answer_rating }}/5)
+                                                                {% else %}-{% endif %}
+                                                            {% elif question.question_type == 'yes_no' %}
+                                                                {% if answer.answer_boolean == true %}
+                                                                    <span class="badge bg-success">Evet</span>
+                                                                {% elif answer.answer_boolean == false %}
+                                                                    <span class="badge bg-danger">Hayır</span>
+                                                                {% else %}-{% endif %}
+                                                            {% elif question.question_type == 'multiple_choice' %}
+                                                                {{ answer.answer_choice or '-' }}
+                                                            {% elif question.question_type == 'text' %}
+                                                                <span title="{{ answer.answer_text or '' }}">
+                                                                    {{ (answer.answer_text[:50] + '...') if answer.answer_text and answer.answer_text|length > 50 else (answer.answer_text or '-') }}
+                                                                </span>
+                                                            {% endif %}
+                                                        {% else %}
+                                                            -
+                                                        {% endif %}
+                                                    </td>
+                                                {% endfor %}
+                                            </tr>
+                                            {% endfor %}
+                                        </tbody>
+                                    </table>
+                                </div>
+                            </div>
+                        </div>
+                    {% else %}
+                        <div class="text-center py-5">
+                            <i class="fas fa-inbox fa-3x text-muted mb-3"></i>
+                            <h5 class="text-muted">Henüz yanıt alınmamış</h5>
+                            <p class="text-muted">Bu anket için henüz hiç yanıt gelmemiş.</p>
+                        </div>
+                    {% endif %}
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}

@@ -1,0 +1,296 @@
+{% extends "base.html" %}
+
+{% block title %}{{ _('My Profile') }} - REEV COFFEE{% endblock %}
+
+{% block content %}
+<div class="container mt-4">
+    <div class="row justify-content-center">
+        <div class="col-lg-8">
+            <!-- Profil Bilgileri Kartı -->
+            <div class="card shadow-sm mb-4">
+                <div class="card-header bg-primary text-white">
+                    <h4><i class="fas fa-user"></i> {{ _('Profile Information') }}</h4>
+                </div>
+                <div class="card-body">
+                    <div class="row">
+                        <div class="col-md-4 text-center mb-3">
+                            <div class="profile-avatar">
+                                <i class="fas fa-user-circle fa-5x text-primary"></i>
+                            </div>
+                            <h5 class="mt-2">{{ current_user.name }}</h5>
+                            <p class="text-muted">{{ _('Customer') }}</p>
+                        </div>
+                        <div class="col-md-8">
+                            <div class="row mb-3">
+                                <div class="col-sm-4"><strong>{{ _('Full Name') }}:</strong></div>
+                                <div class="col-sm-8">{{ current_user.name }}</div>
+                            </div>
+                            <div class="row mb-3">
+                                <div class="col-sm-4"><strong>{{ _('Email') }}:</strong></div>
+                                <div class="col-sm-8">{{ current_user.email }}</div>
+                            </div>
+                            <div class="row mb-3">
+                                <div class="col-sm-4"><strong>{{ _('Phone') }}:</strong></div>
+                                <div class="col-sm-8">{{ current_user.phone if current_user.phone else _('Not specified') }}</div>
+                            </div>
+                            <div class="row mb-3">
+                                <div class="col-sm-4"><strong>{{ _('Registration Date') }}:</strong></div>
+                                <div class="col-sm-8">{{ current_user.created_at.strftime('%d.%m.%Y') if current_user.created_at else _('Unknown') }}</div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Puan Durumu Kartı -->
+            <div class="card shadow-sm mb-4">
+                <div class="card-header bg-success text-white">
+                    <h5><i class="fas fa-star"></i> {{ _('My Points Status') }}</h5>
+                </div>
+                <div class="card-body">
+                    <div class="row text-center">
+                        <div class="col-md-4">
+                            <div class="stat-card">
+                                <h3 class="text-success">{{ current_user.points }}</h3>
+                                <p class="text-muted">{{ _('Current Points') }}</p>
+                            </div>
+                        </div>
+                        
+                        <div class="col-md-4">
+                            <div class="stat-card">
+                                <h3 class="text-warning">{{ purchase_count if purchase_count else 0 }}</h3>
+                                <p class="text-muted">{{ _('Total Purchases') }}</p>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Şifre Değiştirme Kartı -->
+            <div class="card shadow-sm mb-4">
+                <div class="card-header bg-warning text-dark">
+                    <h5><i class="fas fa-lock"></i> {{ _('Change Password') }}</h5>
+                </div>
+                <div class="card-body">
+                    {% with messages = get_flashed_messages(category_filter=['password']) %}
+                        {% if messages %}
+                            {% for message in messages %}
+                                <div class="alert alert-success alert-dismissible fade show" role="alert">
+                                    <i class="fas fa-check-circle"></i> {{ message }}
+                                    <button type="button" class="btn-close" data-bs-dismiss="alert"></button>
+                                </div>
+                            {% endfor %}
+                        {% endif %}
+                    {% endwith %}
+                    
+                    {% with messages = get_flashed_messages(category_filter=['password_error']) %}
+                        {% if messages %}
+                            {% for message in messages %}
+                                <div class="alert alert-danger alert-dismissible fade show" role="alert">
+                                    <i class="fas fa-exclamation-circle"></i> {{ message }}
+                                    <button type="button" class="btn-close" data-bs-dismiss="alert"></button>
+                                </div>
+                            {% endfor %}
+                        {% endif %}
+                    {% endwith %}
+
+                    <form method="POST" action="{{ url_for('change_password') }}">
+                        <div class="row">
+                            <div class="col-md-6 mb-3">
+                                <label for="current_password" class="form-label">{{ _('Current Password') }}</label>
+                                <div class="input-group">
+                                    <span class="input-group-text"><i class="fas fa-key"></i></span>
+                                    <input type="password" class="form-control" id="current_password" 
+                                           name="current_password" required>
+                                </div>
+                            </div>
+                            <div class="col-md-6 mb-3">
+                                <label for="new_password" class="form-label">{{ _('New Password') }}</label>
+                                <div class="input-group">
+                                    <span class="input-group-text"><i class="fas fa-lock"></i></span>
+                                    <input type="password" class="form-control" id="new_password" 
+                                           name="new_password" required minlength="6">
+                                </div>
+                                <small class="text-muted">{{ _('At least 6 characters') }}</small>
+                            </div>
+                        </div>
+                        <div class="row">
+                            <div class="col-md-6 mb-3">
+                                <label for="confirm_password" class="form-label">{{ _('Confirm New Password') }}</label>
+                                <div class="input-group">
+                                    <span class="input-group-text"><i class="fas fa-lock"></i></span>
+                                    <input type="password" class="form-control" id="confirm_password" 
+                                           name="confirm_password" required minlength="6">
+                                </div>
+                            </div>
+                            <div class="col-md-6 d-flex align-items-end">
+                                <button type="submit" class="btn btn-warning w-100">
+                                    <i class="fas fa-save"></i> {{ _('Change Password') }}
+                                </button>
+                            </div>
+                        </div>
+                    </form>
+                </div>
+            </div>
+
+            <!-- Profil Düzenleme Kartı -->
+            <div class="card shadow-sm mb-4">
+                <div class="card-header bg-info text-white">
+                    <h5><i class="fas fa-edit"></i> {{ _('Edit Profile') }}</h5>
+                </div>
+                <div class="card-body">
+                    {% with messages = get_flashed_messages(category_filter=['profile']) %}
+                        {% if messages %}
+                            {% for message in messages %}
+                                <div class="alert alert-success alert-dismissible fade show" role="alert">
+                                    <i class="fas fa-check-circle"></i> {{ message }}
+                                    <button type="button" class="btn-close" data-bs-dismiss="alert"></button>
+                                </div>
+                            {% endfor %}
+                        {% endif %}
+                    {% endwith %}
+
+                    <form method="POST" action="{{ url_for('update_profile') }}">
+                        <div class="row">
+                            <div class="col-md-6 mb-3">
+                                <label for="name" class="form-label">{{ _('Full Name') }}</label>
+                                <div class="input-group">
+                                    <span class="input-group-text"><i class="fas fa-user"></i></span>
+                                    <input type="text" class="form-control" id="name" name="name" 
+                                           value="{{ current_user.name }}" required>
+                                </div>
+                            </div>
+                            <div class="col-md-6 mb-3">
+                                <label for="phone" class="form-label">{{ _('Phone') }}</label>
+                                <div class="input-group">
+                                    <span class="input-group-text"><i class="fas fa-phone"></i></span>
+                                    <input type="tel" class="form-control" id="phone" name="phone" 
+                                           value="{{ current_user.phone if current_user.phone else '' }}"
+                                           placeholder="0555 123 45 67">
+                                </div>
+                            </div>
+                        </div>
+                        <div class="row">
+                            <div class="col-md-6 mb-3">
+                                <label for="preferred_branch" class="form-label">{{ _('Preferred Branch') }}</label>
+                                <div class="input-group">
+                                    <span class="input-group-text"><i class="fas fa-store"></i></span>
+                                    <select class="form-control" id="preferred_branch" name="preferred_branch">
+                                        <option value="">{{ _('Select Branch') }}</option>
+                                        {% for branch in branches %}
+                                        <option value="{{ branch.id }}" 
+                                                {% if current_user.preferred_branch_id == branch.id %}selected{% endif %}>
+                                            {{ branch.name }}
+                                            {% if branch.address %} - {{ branch.address }}{% endif %}
+                                        </option>
+                                        {% endfor %}
+                                    </select>
+                                </div>
+                                <small class="text-muted">{{ _('Campaigns will be filtered by this branch') }}</small>
+                            </div>
+                        </div>
+                        <div class="text-end">
+                            <button type="submit" class="btn btn-info">
+                                <i class="fas fa-save"></i> {{ _('Update Profile') }}
+                            </button>
+                        </div>
+                    </form>
+                </div>
+            </div>
+
+            <!-- Hızlı İşlemler -->
+            <div class="card shadow-sm">
+                <div class="card-header bg-dark text-white">
+                    <h5><i class="fas fa-bolt"></i> {{ _('Quick Actions') }}</h5>
+                </div>
+                <div class="card-body">
+                    <div class="row text-center">
+                        <div class="col-md-3 mb-2">
+                            <a href="{{ url_for('dashboard') }}" class="btn btn-outline-primary w-100">
+                                <i class="fas fa-qrcode"></i><br>{{ _('Generate QR') }}
+                            </a>
+                        </div>
+                        <div class="col-md-3 mb-2">
+                            <a href="{{ url_for('redeem_points') }}" class="btn btn-outline-success w-100">
+                                <i class="fas fa-gift"></i><br>{{ _('Redeem Points') }}
+                            </a>
+                        </div>
+                        <div class="col-md-3 mb-2">
+                            <a href="{{ url_for('purchase_history') }}" class="btn btn-outline-info w-100">
+                                <i class="fas fa-shopping-bag"></i><br>{{ _('My Purchases') }}
+                            </a>
+                        </div>
+                        <div class="col-md-3 mb-2">
+                            <a href="{{ url_for('logout') }}" class="btn btn-outline-danger w-100">
+                                <i class="fas fa-sign-out-alt"></i><br>{{ _('Logout') }}
+                            </a>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}
+
+{% block scripts %}
+<style>
+.stat-card {
+    padding: 20px;
+    border-radius: 10px;
+    background: linear-gradient(135deg, #f8f9fa 0%, #e9ecef 100%);
+    margin: 10px 0;
+}
+
+.profile-avatar {
+    margin-bottom: 15px;
+}
+
+.card {
+    border: none;
+    border-radius: 15px;
+}
+
+.card-header {
+    border-radius: 15px 15px 0 0 !important;
+}
+
+.btn {
+    border-radius: 8px;
+}
+
+.input-group-text {
+    background-color: #f8f9fa;
+    border-color: #dee2e6;
+}
+
+@media (max-width: 768px) {
+    .stat-card h3 {
+        font-size: 1.5rem;
+    }
+    
+    .profile-avatar i {
+        font-size: 3rem !important;
+    }
+}
+</style>
+
+<script>
+// Şifre doğrulama
+document.addEventListener('DOMContentLoaded', function() {
+    const newPassword = document.getElementById('new_password');
+    const confirmPassword = document.getElementById('confirm_password');
+    
+    function validatePassword() {
+        if (newPassword.value !== confirmPassword.value) {
+            confirmPassword.setCustomValidity('Şifreler eşleşmiyor');
+        } else {
+            confirmPassword.setCustomValidity('');
+        }
+    }
+    
+    newPassword.addEventListener('input', validatePassword);
+    confirmPassword.addEventListener('input', validatePassword);
+});
+</script>
+{% endblock %}

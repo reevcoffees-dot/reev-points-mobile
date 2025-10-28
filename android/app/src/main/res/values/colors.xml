@@ -1,0 +1,10 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <!-- REEV Points brand colors matching web project -->
+    <color name="notification_color">#8B4513</color>
+    <color name="primary_color">#8B4513</color>
+    <color name="secondary_color">#D2691E</color>
+    <color name="accent_color">#F4A460</color>
+    <color name="background_start">#A6DBB8</color>
+    <color name="background_end">#4D705C</color>
+</resources>

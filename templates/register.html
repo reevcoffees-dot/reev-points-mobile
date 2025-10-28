@@ -1,0 +1,130 @@
+<!DOCTYPE html>
+<html lang="tr">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>{{ _('Register') }}</title>
+    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.1.3/dist/css/bootstrap.min.css" rel="stylesheet">
+    <link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css" rel="stylesheet">
+</head>
+<body class="bg-light">
+
+<!-- Flash Messages -->
+{% with messages = get_flashed_messages(with_categories=true) %}
+    {% if messages %}
+        <div class="container-fluid">
+            {% for category, message in messages %}
+                <div class="alert alert-{{ 'danger' if category == 'error' else category }} alert-dismissible fade show" role="alert">
+                    {{ message }}
+                    <button type="button" class="btn-close" data-bs-dismiss="alert"></button>
+                </div>
+            {% endfor %}
+        </div>
+    {% endif %}
+{% endwith %}
+
+<div class="container-fluid vh-100 d-flex align-items-center justify-content-center">
+    <div class="row w-100 justify-content-center">
+        <div class="col-md-4 col-lg-3">
+            <div class="card shadow">
+                <div class="card-header text-center bg-primary text-white">
+                    <h4><i class="fas fa-user-plus"></i> {{ _('Register') }}</h4>
+                </div>
+                <div class="card-body" style="max-height: 70vh; overflow-y: auto;">
+                    <form method="POST">
+                        <div class="mb-3">
+                            <label for="name" class="form-label">{{ _('Name') }}</label>
+                            <input type="text" class="form-control" id="name" name="name" required>
+                        </div>
+                        
+                        <div class="mb-3">
+                            <label for="email" class="form-label">{{ _('Email') }}</label>
+                            <input type="email" class="form-control" id="email" name="email" required>
+                        </div>
+                        
+                        <div class="mb-3">
+                            <label for="phone" class="form-label">{{ _('Phone (Optional)') }}</label>
+                            <input type="tel" class="form-control" id="phone" name="phone">
+                        </div>
+                        
+                        <div class="mb-3">
+                            <label for="password" class="form-label">{{ _('Password') }}</label>
+                            <input type="password" class="form-control" id="password" name="password" required>
+                        </div>
+                        
+                        <!-- Açık Rıza Metni -->
+                        <div class="mb-3">
+                            <div class="card border-info">
+                                <div class="card-header bg-info text-white">
+                                    <h6 class="mb-0"><i class="fas fa-shield-alt"></i> {{ _('Personal Data Protection') }}</h6>
+                                </div>
+                                <div class="card-body">
+                                    <div style="max-height: 200px; overflow-y: auto; font-size: 0.9rem;">
+                                        <p><strong>{{ _('CONSENT TEXT') }}</strong></p>
+                                        
+                                        <p>6698 sayılı Kişisel Verilerin Korunması Kanunu ("KVKK") uyarınca, kişisel verilerinizin işlenmesi için açık rızanız gerekmektedir.</p>
+                                        
+                                        <p><strong>Toplanan Veriler:</strong></p>
+                                        <ul>
+                                            <li>Ad, soyad bilgileriniz</li>
+                                            <li>E-posta adresiniz</li>
+                                            <li>Telefon numaranız (opsiyonel)</li>
+                                            <li>Sadakat programı işlem geçmişiniz</li>
+                                        </ul>
+                                        
+                                        <p><strong>Verilerin İşlenme Amaçları:</strong></p>
+                                        <ul>
+                                            <li>Sadakat programı hizmetlerinin sunulması</li>
+                                            <li>Puan kazanma ve kullanma işlemlerinin gerçekleştirilmesi</li>
+                                            <li>Kampanya ve promosyon bilgilendirmelerinin yapılması</li>
+                                            <li>Müşteri hizmetlerinin sunulması</li>
+                                            <li>Yasal yükümlülüklerin yerine getirilmesi</li>
+                                        </ul>
+                                        
+                                        <p><strong>Verilerinizin Paylaşımı:</strong></p>
+                                        <p>Kişisel verileriniz, hizmet sunumu için gerekli olan durumlarda ve yasal yükümlülükler çerçevesinde üçüncü kişilerle paylaşılabilir.</p>
+                                        
+                                        <p><strong>Haklarınız:</strong></p>
+                                        <ul>
+                                            <li>Kişisel verilerinizin işlenip işlenmediğini öğrenme</li>
+                                            <li>Kişisel verileriniz hakkında bilgi talep etme</li>
+                                            <li>Kişisel verilerinizin düzeltilmesini isteme</li>
+                                            <li>Kişisel verilerinizin silinmesini isteme</li>
+                                            <li>Rızanızı geri çekme</li>
+                                        </ul>
+                                        
+                                        <p>Bu haklarınızı kullanmak için <strong>info@reevcoffee.com</strong> adresine başvurabilirsiniz.</p>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                        
+                        <!-- Onay Checkbox -->
+                        <div class="mb-3">
+                            <div class="form-check">
+                                <input class="form-check-input" type="checkbox" id="consent" name="consent" required>
+                                <label class="form-check-label" for="consent">
+                                    <strong>{{ _('I have read and understood the consent text above') }}</strong>
+                                </label>
+                            </div>
+                        </div>
+                        
+                        <div class="d-grid">
+                            <button type="submit" class="btn btn-primary">
+                                <i class="fas fa-user-plus"></i> {{ _('Register') }}
+                            </button>
+                        </div>
+                    </form>
+                    
+                    <div class="text-center mt-3">
+                        <p>{{ _('Already have an account?') }} <a href="{{ url_for('login') }}">{{ _('Login') }}</a></p>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+<script src="https://cdn.jsdelivr.net/npm/bootstrap@5.1.3/dist/js/bootstrap.bundle.min.js"></script>
+</body>
+</html>

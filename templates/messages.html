@@ -1,0 +1,169 @@
+{% extends "base.html" %}
+
+{% block title %}{{ _('My Messages') }} - Cafe Sadakat{% endblock %}
+
+{% block content %}
+<div class="container mt-4">
+    <div class="row">
+        <div class="col-md-12">
+            <div class="card">
+                <div class="card-header d-flex justify-content-between align-items-center">
+                    <h5><i class="fas fa-envelope"></i> {{ _('My Messages') }}</h5>
+                    <span class="badge bg-primary">{{ messages|length }} {{ _('Messages') }}</span>
+                </div>
+                <div class="card-body">
+                    {% if messages %}
+                        <div class="list-group">
+                            {% for message in messages %}
+                            <div class="list-group-item {% if not message.is_read %}list-group-item-light border-primary{% endif %}" 
+                                 onclick="openMessage({{ message.id }})" style="cursor: pointer;">
+                                <div class="d-flex w-100 justify-content-between">
+                                    <h6 class="mb-1">
+                                        {% if not message.is_read %}
+                                            <i class="fas fa-circle text-primary" style="font-size: 0.5em;"></i>
+                                        {% endif %}
+                                        {{ message.title }}
+                                        {% if message.is_admin_message %}
+                                            <span class="badge bg-warning text-dark ms-2">{{ _('Admin') }}</span>
+                                        {% endif %}
+                                    </h6>
+                                    <small class="text-muted">{{ message.created_at.strftime('%d.%m.%Y %H:%M') }}</small>
+                                </div>
+                                <p class="mb-1 text-truncate">{{ message.content[:100] }}{% if message.content|length > 100 %}...{% endif %}</p>
+                                {% if message.is_read %}
+                                    <small class="text-success">
+                                        <i class="fas fa-check-double"></i> {{ _('Read') }} 
+                                        {% if message.read_at %}
+                                            - {{ message.read_at.strftime('%d.%m.%Y %H:%M') }}
+                                        {% endif %}
+                                    </small>
+                                {% else %}
+                                    <small class="text-primary">
+                                        <i class="fas fa-envelope"></i> {{ _('Unread') }}
+                                    </small>
+                                {% endif %}
+                            </div>
+                            {% endfor %}
+                        </div>
+                    {% else %}
+                        <div class="text-center py-5">
+                            <i class="fas fa-inbox fa-3x text-muted mb-3"></i>
+                            <h5 class="text-muted">{{ _('No Messages') }}</h5>
+                            <p class="text-muted">{{ _('You have no messages yet.') }}</p>
+                        </div>
+                    {% endif %}
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- Mesaj Detay Modal -->
+<div class="modal fade" id="messageModal" tabindex="-1" aria-labelledby="messageModalLabel" aria-hidden="true">
+    <div class="modal-dialog modal-lg">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h5 class="modal-title" id="messageModalLabel">
+                    <i class="fas fa-envelope-open"></i> <span id="modalMessageTitle"></span>
+                </h5>
+                <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+            </div>
+            <div class="modal-body">
+                <div class="mb-3">
+                    <small class="text-muted">
+                        <i class="fas fa-calendar"></i> <span id="modalMessageDate"></span>
+                        <span id="modalMessageSender" class="ms-3"></span>
+                    </small>
+                </div>
+                <div id="modalMessageContent" class="message-content"></div>
+            </div>
+            <div class="modal-footer">
+                <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">
+                    <i class="fas fa-times"></i> {{ _('Close') }}
+                </button>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}
+
+{% block scripts %}
+<script>
+function openMessage(messageId) {
+    fetch(`/message/${messageId}`, {
+        method: 'GET',
+        credentials: 'same-origin'
+    })
+    .then(response => response.json())
+    .then(data => {
+        if (data.success) {
+            // Modal içeriğini doldur
+            document.getElementById('modalMessageTitle').textContent = data.message.title;
+            document.getElementById('modalMessageDate').textContent = data.message.created_at;
+            document.getElementById('modalMessageContent').innerHTML = data.message.content.replace(/\n/g, '<br>');
+            
+            // Gönderen bilgisi
+            const senderElement = document.getElementById('modalMessageSender');
+            if (data.message.is_admin_message) {
+                senderElement.innerHTML = '<i class="fas fa-user-shield"></i> {{ _("Admin") }}';
+            } else if (data.message.sender_name) {
+                senderElement.innerHTML = `<i class="fas fa-user"></i> ${data.message.sender_name}`;
+            } else {
+                senderElement.innerHTML = '';
+            }
+            
+            // Modal'ı göster
+            const modal = new bootstrap.Modal(document.getElementById('messageModal'));
+            modal.show();
+            
+            // Mesajı okundu olarak işaretle (görsel güncelleme)
+            if (!data.message.is_read) {
+                const messageElement = document.querySelector(`[onclick="openMessage(${messageId})"]`);
+                if (messageElement) {
+                    messageElement.classList.remove('list-group-item-light', 'border-primary');
+                    const unreadIcon = messageElement.querySelector('.fas.fa-circle');
+                    if (unreadIcon) {
+                        unreadIcon.remove();
+                    }
+                    const statusElement = messageElement.querySelector('small:last-child');
+                    if (statusElement) {
+                        statusElement.innerHTML = '<i class="fas fa-check-double text-success"></i> {{ _("Read") }}';
+                        statusElement.className = 'text-success';
+                    }
+                }
+                
+                // Badge sayısını güncelle
+                const badge = document.querySelector('.badge.bg-primary');
+                if (badge) {
+                    const currentCount = parseInt(badge.textContent);
+                    if (currentCount > 0) {
+                        badge.textContent = `${currentCount} {{ _('Messages') }}`;
+                    }
+                }
+            }
+        } else {
+            alert('Mesaj yüklenirken hata oluştu: ' + data.error);
+        }
+    })
+    .catch(error => {
+        console.error('Mesaj yükleme hatası:', error);
+        alert('Mesaj yüklenirken hata oluştu.');
+    });
+}
+</script>
+
+<style>
+.message-content {
+    white-space: pre-wrap;
+    word-wrap: break-word;
+}
+
+.list-group-item:hover {
+    background-color: #f8f9fa !important;
+}
+
+.list-group-item.border-primary {
+    border-left: 4px solid #0d6efd !important;
+}
+</style>
+{% endblock %}

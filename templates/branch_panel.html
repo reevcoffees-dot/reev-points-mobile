@@ -1,0 +1,760 @@
+<!DOCTYPE html>
+<html lang="tr">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <meta http-equiv="Permissions-Policy" content="camera=*">
+    <meta name="format-detection" content="telephone=no">
+    <meta name="mobile-web-app-capable" content="yes">
+    <meta name="apple-mobile-web-app-capable" content="yes">
+    <title>Şube Paneli - {{ branch.name }}</title>
+    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" rel="stylesheet">
+    <link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css" rel="stylesheet">
+    <style>
+        :root {
+            --primary-color: #8B4513;
+            --secondary-color: #D2691E;
+            --accent-color: #F4A460;
+            --success-color: #28a745;
+            --warning-color: #ffc107;
+            --danger-color: #dc3545;
+        }
+        
+        body {
+            background: linear-gradient(135deg, #f5f7fa 0%, #c3cfe2 100%);
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+            min-height: 100vh;
+        }
+        
+        .card {
+            border: none;
+            border-radius: 15px;
+            box-shadow: 0 8px 25px rgba(0,0,0,0.1);
+            transition: transform 0.3s ease;
+        }
+        
+        .card:hover {
+            transform: translateY(-5px);
+        }
+        
+        .btn-primary {
+            background: linear-gradient(135deg, var(--primary-color) 0%, var(--secondary-color) 100%);
+            border: none;
+            border-radius: 25px;
+            padding: 10px 30px;
+            font-weight: 600;
+            transition: all 0.3s ease;
+        }
+        
+        .btn-primary:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 5px 15px rgba(139, 69, 19, 0.4);
+        }
+        
+        .alert {
+            border: none;
+            border-radius: 10px;
+            margin-bottom: 20px;
+        }
+    </style>
+</head>
+<body>
+    <main>
+
+<!-- QR Scanner Modal - Sayfanın Ortasında -->
+<div class="modal" id="qrScannerModal" tabindex="-1" data-bs-backdrop="static" data-bs-keyboard="false" style="display: none; position: fixed; top: 0; left: 0; width: 100%; height: 100%; z-index: 9999; background-color: rgba(0,0,0,0.5);">
+    <div class="modal-dialog modal-dialog-centered" style="z-index: 10000;">
+        <div class="modal-content" style="position: relative; z-index: 10001;">
+            <div class="modal-header">
+                <h5 class="modal-title">
+                    <i class="fas fa-camera"></i> QR Kod Fotoğrafı
+                </h5>
+                <button type="button" class="btn-close" id="modal-close-btn" style="display: none;"></button>
+            </div>
+            <div class="modal-body text-center">
+                <div class="mb-4">
+                    <i class="fas fa-qrcode fa-4x text-primary mb-3"></i>
+                    <h6>QR Kod Fotoğrafı Seçin</h6>
+                    <p class="text-muted">Kamera ile çekin veya galeriden seçin</p>
+                </div>
+                
+                <!-- Dosya Yükleme -->
+                <div class="mb-3">
+                    <input type="file" class="form-control form-control-lg" id="qr-file-input" 
+                           accept="image/*" capture="environment">
+                </div>
+                
+                <div class="row">
+                    <div class="col-6">
+                        <button type="button" class="btn btn-outline-primary w-100" id="camera-btn" style="position: relative; z-index: 10002;">
+                            <i class="fas fa-camera"></i><br>Kamera ile Çek
+                        </button>
+                    </div>
+                    <div class="col-6">
+                        <button type="button" class="btn btn-outline-secondary w-100" id="file-btn" style="position: relative; z-index: 10002;">
+                            <i class="fas fa-folder"></i><br>Dosya Seç
+                        </button>
+                    </div>
+                </div>
+                
+                <div id="qr-processing" class="mt-3" style="display: none;">
+                    <div class="spinner-border text-primary" role="status">
+                        <span class="visually-hidden">İşleniyor...</span>
+                    </div>
+                    <p class="text-muted mt-2">QR kod okunuyor...</p>
+                </div>
+            </div>
+            <div class="modal-footer">
+                <button type="button" class="btn btn-secondary" id="cancel-qr-btn" style="position: relative; z-index: 10002;">
+                    <i class="fas fa-times"></i> İptal
+                </button>
+                <button type="button" class="btn btn-success" id="qr-success-btn" style="display: none; position: relative; z-index: 10002;">
+                    <i class="fas fa-check"></i> Tamam
+                </button>
+            </div>
+        </div>
+    </div>
+</div>
+<div class="container mt-4">
+    <div class="row">
+        <div class="col-12">
+            <div class="card mb-4">
+                <div class="card-header bg-warning text-dark">
+                    <h4><i class="fas fa-store"></i> {{ branch.name }} - Şube Paneli</h4>
+                    <small>{{ branch.address }}</small>
+                </div>
+                <div class="card-body">
+                    <div class="row">
+                        <div class="col-md-3 text-center">
+                            <h3 class="text-primary">{{ qr_codes|length }}</h3>
+                            <p>Oluşturulan QR</p>
+                        </div>
+                        <div class="col-md-3 text-center">
+                            <h3 class="text-success">{{ qr_codes|selectattr('is_used')|list|length }}</h3>
+                            <p>Kullanılan QR</p>
+                        </div>
+                        <div class="col-md-3 text-center">
+                            <h3 class="text-warning">{{ (qr_codes|rejectattr('is_used')|list|length) }}</h3>
+                            <p>Bekleyen QR</p>
+                        </div>
+                        <div class="col-md-3 text-center">
+                            <a href="{{ url_for('branch_logout') }}" class="btn btn-outline-danger">
+                                <i class="fas fa-sign-out-alt"></i> Çıkış
+                            </a>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+    
+    <div class="row">
+        <div class="col-md-6" id="qr-scan-section">
+            <div class="card">
+                <div class="card-header">
+                    <h5><i class="fas fa-qrcode"></i> Müşteri QR Okut</h5>
+                    <small class="text-muted">Puan QR kodları ve Kampanya QR kodları</small>
+                </div>
+                <div class="card-body">
+                    <form id="scan-customer-qr-form">
+                        <div class="mb-3">
+                            <label for="customer_qr_code" class="form-label">Müşteri QR Kodu</label>
+                            <input type="text" class="form-control" id="customer_qr_code" placeholder="QR kod buraya..." required>
+                        </div>
+                        <button type="submit" class="btn btn-success" id="manual-submit-btn">
+                            <i class="fas fa-keyboard"></i> Manuel Gönder
+                        </button>
+                    </form>
+                    
+                    
+                    <div id="scan-result" class="mt-3" style="display: none;">
+                        <div class="alert alert-success">
+                            <strong>QR Okutma Başarılı!</strong><br>
+                            Müşteri: <span id="customer-name"></span><br>
+                            Verilen Puan: <span id="points-given"></span><br>
+                            Toplam Puan: <span id="customer-total-points"></span>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+        
+        <div class="col-md-6" id="product-confirm-section">
+            <div class="card">
+                <div class="card-header">
+                    <h5><i class="fas fa-check-circle"></i> Ürün Onaylama</h5>
+                </div>
+                <div class="card-body">
+                    <form id="confirm-product-form">
+                        <div class="mb-3">
+                            <label for="confirmation_code" class="form-label">Onay Kodu</label>
+                            <input type="text" class="form-control" id="confirmation_code" placeholder="6 haneli onay kodu..." maxlength="6" required>
+                        </div>
+                        <button type="submit" class="btn btn-success">
+                            <i class="fas fa-check"></i> Ürünü Onayla
+                        </button>
+                    </form>
+                    
+                    <div id="confirm-result" class="mt-3" style="display: none;">
+                        <div class="alert alert-success alert-dismissible">
+                            <strong>Ürün Onaylandı!</strong><br>
+                            Müşteri: <span id="confirm-customer-name"></span><br>
+                            Ürün: <span id="confirm-product-name"></span><br>
+                            Kullanılan Puan: <span id="confirm-points-used"></span>
+                            <button type="button" class="btn-close" onclick="document.getElementById('confirm-result').style.display='none'"></button>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+        
+        <div class="col-md-6">
+            <div class="card">
+                <div class="card-header">
+                    <h5><i class="fas fa-list"></i> Okutulan QR Kodlar</h5>
+                </div>
+                <div class="card-body">
+                    {% if scanned_qrs %}
+                        <div class="table-responsive">
+                            <table class="table table-sm">
+                                <thead>
+                                    <tr>
+                                        <th>Müşteri</th>
+                                        <th>QR Kod</th>
+                                        <th>Puan</th>
+                                        <th>Tarih</th>
+                                    </tr>
+                                </thead>
+                                <tbody>
+                                    {% for qr in scanned_qrs %}
+                                    <tr>
+                                        <td>{{ qr.user.name }}</td>
+                                        <td><code>{{ qr.code[:15] }}...</code></td>
+                                        <td><span class="badge bg-success">+{{ qr.points_earned }}</span></td>
+                                        <td>{{ qr.used_at.strftime('%d.%m %H:%M') }}</td>
+                                    </tr>
+                                    {% endfor %}
+                                </tbody>
+                            </table>
+                        </div>
+                    {% else %}
+                        <div class="text-center py-4">
+                            <i class="fas fa-qrcode fa-3x text-muted mb-3"></i>
+                            <p class="text-muted">Henüz QR kod okutulmamış.</p>
+                        </div>
+                    {% endif %}
+                </div>
+            </div>
+        </div>
+       
+    
+    <!-- Onaylanmış Ürünler Listesi -->
+    <div class="row mt-4">
+        <div class="col-12">
+            <div class="card">
+                <div class="card-header">
+                    <h5><i class="fas fa-check-double"></i> Bu Şube Tarafından Onaylanan Ürünler</h5>
+                </div>
+                <div class="card-body">
+                    {% if confirmed_redemptions %}
+                        <div class="table-responsive">
+                            <table class="table table-striped">
+                                <thead>
+                                    <tr>
+                                        <th>Müşteri</th>
+                                        <th>Ürün</th>
+                                        <th>Onay Kodu</th>
+                                        <th>Kullanılan Puan</th>
+                                        <th>Satın Alma Tarihi</th>
+                                        <th>Onay Tarihi</th>
+                                    </tr>
+                                </thead>
+                                <tbody>
+                                    {% for redemption in confirmed_redemptions %}
+                                    <tr>
+                                        <td>
+                                            <strong>{{ redemption.user.name }}</strong><br>
+                                            <small class="text-muted">{{ redemption.user.email }}</small>
+                                        </td>
+                                        <td>
+                                            <strong>{{ redemption.product.name }}</strong>
+                                            {% if redemption.product.description %}
+                                            <br><small class="text-muted">{{ redemption.product.description }}</small>
+                                            {% endif %}
+                                        </td>
+                                        <td>
+                                            <code class="bg-success text-white p-1 rounded">{{ redemption.confirmation_code }}</code>
+                                        </td>
+                                        <td>
+                                            <span class="badge bg-primary">{{ redemption.points_used }} Puan</span>
+                                        </td>
+                                        <td>
+                                            <small>{{ redemption.redeemed_at.strftime('%d.%m.%Y') }}</small><br>
+                                            <small class="text-muted">{{ redemption.redeemed_at.strftime('%H:%M') }}</small>
+                                        </td>
+                                        <td>
+                                            <small>{{ redemption.confirmed_at.strftime('%d.%m.%Y') }}</small><br>
+                                            <small class="text-muted">{{ redemption.confirmed_at.strftime('%H:%M') }}</small>
+                                        </td>
+                                    </tr>
+                                    {% endfor %}
+                                </tbody>
+                            </table>
+                        </div>
+                        
+                        {% if confirmed_redemptions|length == 20 %}
+                        <div class="text-center mt-3">
+                            <small class="text-muted">Son 20 onaylanmış ürün gösteriliyor.</small>
+                        </div>
+                        {% endif %}
+                        
+                    {% else %}
+                        <div class="text-center py-4">
+                            <i class="fas fa-inbox fa-3x text-muted mb-3"></i>
+                            <p class="text-muted">Henüz bu şube tarafından onaylanmış ürün bulunmuyor.</p>
+                        </div>
+                    {% endif %}
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+    </main>
+
+    <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/js/bootstrap.bundle.min.js"></script>
+    <!-- jsQR - Basit HTTP uyumlu QR scanner -->
+    <script src="https://cdn.jsdelivr.net/npm/jsqr@1.4.0/dist/jsQR.js" 
+            onload="console.log('✅ jsQR kütüphanesi yüklendi')" 
+            onerror="console.error('❌ jsQR kütüphanesi yüklenemedi')"></script>
+    <!-- Basit QR Scanner -->
+    <script src="{{ url_for('static', filename='js/simple_qr_scanner.js') }}"></script>
+<script>
+// QR kod işleme fonksiyonu
+function processQRCode(qrCode) {
+    console.log('QR kod işleniyor:', qrCode);
+    
+    // Kampanya QR kodu mu kontrol et
+    if (qrCode.startsWith('CAMPAIGN')) {
+        processCampaignQR(qrCode);
+        return;
+    }
+    
+    // Normal müşteri QR kodu işle
+    fetch('/scan_qr', {
+        method: 'POST',
+        headers: {
+            'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({
+            qr_code: qrCode
+        })
+    })
+    .then(response => response.json())
+    .then(data => {
+        if (data.success) {
+            // Başarı mesajı göster
+            showQRResult(`
+                <div class="alert alert-success">
+                    <i class="fas fa-check-circle"></i> <strong>QR Kod Başarıyla İşlendi!</strong><br>
+                    Müşteri: <strong>${data.customer_name}</strong><br>
+                    Kazanılan Puan: <strong>+${data.points_earned}</strong><br>
+                    Toplam Puan: <strong>${data.total_points}</strong>
+                </div>
+            `);
+            
+            // Formu temizle
+            document.getElementById('customer_qr_code').value = '';
+            
+            // Normal QR kodlar için otomatik yenileme kaldırıldı
+            // setTimeout(() => {
+            //     location.reload();
+            // }, 2000);
+        } else {
+            showQRResult(`
+                <div class="alert alert-danger">
+                    <i class="fas fa-exclamation-triangle"></i> <strong>Hata!</strong><br>
+                    ${data.error}
+                </div>
+            `);
+        }
+    })
+    .catch(error => {
+        console.error('QR işleme hatası:', error);
+        showQRResult(`
+            <div class="alert alert-danger">
+                <i class="fas fa-exclamation-triangle"></i> <strong>Bağlantı Hatası!</strong><br>
+                ${error.message}
+            </div>
+        `);
+    });
+}
+
+// Kampanya QR kod işleme fonksiyonu
+function processCampaignQR(qrCode) {
+    console.log('Kampanya QR kodu işleniyor:', qrCode);
+    
+    fetch('/branch/use_campaign_qr', {
+        method: 'POST',
+        headers: {
+            'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({
+            qr_code: qrCode
+        })
+    })
+    .then(response => response.json())
+    .then(data => {
+        if (data.success) {
+            // Kampanya ürünlerini detaylı göster
+            let productsHtml = '';
+            if (data.products && data.products.length > 0) {
+                productsHtml = `
+                    <div class="mt-4">
+                        <h6 class="text-primary mb-3">
+                            <i class="fas fa-shopping-bag"></i> Kampanya Ürünleri (${data.products.length} adet)
+                        </h6>
+                        <div class="row">
+                `;
+                
+                data.products.forEach(product => {
+                    const imageHtml = product.image_filename 
+                        ? `<img src="/static/uploads/${product.image_filename}" class="img-fluid rounded" style="height: 60px; width: 60px; object-fit: cover;">`
+                        : `<div class="bg-light rounded d-flex align-items-center justify-content-center" style="height: 60px; width: 60px;"><i class="fas fa-image text-muted"></i></div>`;
+                    
+                    // Ürün türüne göre border rengi
+                    const borderClass = product.source === 'existing_product' ? 'border-success' : 'border-warning';
+                    const sourceIcon = product.source === 'existing_product' 
+                        ? '<i class="fas fa-box text-success me-1" title="Mevcut Ürün"></i>' 
+                        : '<i class="fas fa-star text-warning me-1" title="Kampanya Ürünü"></i>';
+                    
+                    // Açıklama varsa göster
+                    const descriptionHtml = product.description 
+                        ? `<div class="mt-1"><small class="text-muted">${product.description}</small></div>`
+                        : '';
+                    
+                    productsHtml += `
+                        <div class="col-md-6 mb-3">
+                            <div class="card ${borderClass}">
+                                <div class="card-body p-3">
+                                    <div class="row align-items-center">
+                                        <div class="col-3">
+                                            ${imageHtml}
+                                        </div>
+                                        <div class="col-9">
+                                            <h6 class="card-title mb-1">${sourceIcon}${product.name}</h6>
+                                            <small class="text-muted">${product.category}</small>
+                                            ${descriptionHtml}
+                                            <div class="mt-2">
+                                                <span class="badge bg-danger text-decoration-line-through me-2">
+                                                    ${product.original_points} Puan
+                                                </span>
+                                                <span class="badge bg-success fs-6">
+                                                    ${product.discounted_points} Puan
+                                                </span>
+                                            </div>
+                                            <div class="mt-1">
+                                                <small class="text-success fw-bold">
+                                                    <i class="fas fa-tag"></i> ${product.discount_text}
+                                                </small>
+                                            </div>
+                                        </div>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                    `;
+                });
+                
+                productsHtml += `
+                        </div>
+                    </div>
+                `;
+            }
+            
+            showQRResult(`
+                <div class="alert alert-warning border-warning">
+                    <div class="d-flex align-items-center mb-3">
+                        <i class="fas fa-gift fa-2x text-warning me-3"></i>
+                        <div>
+                            <h5 class="mb-1">Kampanya QR Kodu Başarıyla Kullanıldı!</h5>
+                            <small class="text-muted">Müşteriye kampanya ürünlerini sunabilirsiniz</small>
+                        </div>
+                    </div>
+                    
+                    <div class="row mb-3">
+                        <div class="col-md-6">
+                            <strong>Müşteri:</strong> ${data.customer_name}
+                        </div>
+                        <div class="col-md-6">
+                            <strong>Kullanım Tarihi:</strong> ${data.used_at}
+                        </div>
+                    </div>
+                    
+                    <div class="mb-3">
+                        <strong>Kampanya:</strong> ${data.campaign_title}<br>
+                        <small class="text-muted">${data.campaign_description}</small>
+                    </div>
+                    
+                    ${data.selected_product ? `
+                    <div class="alert alert-success border-success mb-3">
+                        <div class="d-flex align-items-center">
+                            <i class="fas fa-check-circle fa-2x text-success me-3"></i>
+                            <div>
+                                <h6 class="mb-1">
+                                    <i class="fas fa-gift"></i> Müşterinin Seçtiği Ürün
+                                </h6>
+                                <strong class="text-success">${data.selected_product.name}</strong>
+                                ${data.selected_product.type === 'existing_product' ? 
+                                    `<span class="badge bg-success ms-2">Mevcut Ürün</span>` : 
+                                    `<span class="badge bg-warning text-dark ms-2">Kampanya Ürünü</span>`
+                                }
+                                ${data.selected_product.category ? 
+                                    `<br><small class="text-muted">${data.selected_product.category}</small>` : ''
+                                }
+                                ${data.selected_product.description ? 
+                                    `<br><small class="text-muted">${data.selected_product.description}</small>` : ''
+                                }
+                            </div>
+                        </div>
+                    </div>
+                    ` : ''}
+                    
+                    ${productsHtml}
+                    
+                    <div class="alert alert-info mt-3 mb-0">
+                        <small>
+                            <i class="fas fa-info-circle"></i> Bu kampanya QR kodu artık kullanılamaz. 
+                            Müşteri yukarıdaki ürünleri indirimli fiyatlarla satın alabilir.
+                        </small>
+                    </div>
+                </div>
+            `);
+            
+            // Formu temizle
+            document.getElementById('customer_qr_code').value = '';
+            
+            // Otomatik yenileme kaldırıldı - pencere yeni QR okutulana kadar açık kalacak
+        } else {
+            showQRResult(`
+                <div class="alert alert-danger">
+                    <i class="fas fa-exclamation-triangle"></i> <strong>Kampanya QR Hatası!</strong><br>
+                    ${data.error}
+                </div>
+            `);
+        }
+    })
+    .catch(error => {
+        console.error('Kampanya QR işleme hatası:', error);
+        showQRResult(`
+            <div class="alert alert-danger">
+                <i class="fas fa-exclamation-triangle"></i> <strong>Bağlantı Hatası!</strong><br>
+                ${error.message}
+            </div>
+        `);
+    });
+}
+
+// Ürün onaylama formu
+document.getElementById('confirm-product-form').addEventListener('submit', function(e) {
+    e.preventDefault();
+    
+    const confirmationCode = document.getElementById('confirmation_code').value;
+    
+    fetch('/branch/confirm_product', {
+        method: 'POST',
+        headers: {
+            'Content-Type': 'application/x-www-form-urlencoded',
+        },
+        body: 'confirmation_code=' + encodeURIComponent(confirmationCode)
+    })
+    .then(response => response.json())
+    .then(data => {
+        if (data.success) {
+            document.getElementById('confirm-customer-name').textContent = data.customer_name;
+            document.getElementById('confirm-product-name').textContent = data.product_name;
+            document.getElementById('confirm-points-used').textContent = data.points_used + ' Puan';
+            document.getElementById('confirm-result').style.display = 'block';
+            document.getElementById('confirmation_code').value = '';
+            
+            // Bildirimi sayfada bırak - otomatik yenileme yok
+            // setTimeout(() => {
+            //     location.reload();
+            // }, 2000);
+        } else {
+            alert('Hata: ' + data.error);
+        }
+    })
+    .catch(error => {
+        console.error('Error:', error);
+        alert('Bir hata oluştu!');
+    });
+});
+
+// Manuel form gönderimi
+document.getElementById('scan-customer-qr-form').addEventListener('submit', function(e) {
+    e.preventDefault();
+    const qrCode = document.getElementById('customer_qr_code').value;
+    if (qrCode.trim()) {
+        processQRCode(qrCode);
+    }
+});
+
+
+// QR Scanner Modal ve Kamera Fonksiyonları
+let qrScanner = null;
+let videoStream = null;
+
+// QR Tara butonu click eventi
+document.getElementById('qr-scan-btn').addEventListener('click', function() {
+    const modal = document.getElementById('qrScannerModal');
+    modal.style.display = 'block';
+    modal.classList.add('show');
+    document.body.classList.add('modal-open');
+    
+    // Backdrop ekle
+    if (!document.querySelector('.modal-backdrop')) {
+        const backdrop = document.createElement('div');
+        backdrop.className = 'modal-backdrop show';
+        document.body.appendChild(backdrop);
+    }
+});
+
+// İptal butonu
+document.getElementById('cancel-qr-btn').addEventListener('click', function() {
+    const modal = document.getElementById('qrScannerModal');
+    modal.style.display = 'none';
+    modal.classList.remove('show');
+    document.body.classList.remove('modal-open');
+    
+    // Backdrop'u kaldır
+    const backdrop = document.querySelector('.modal-backdrop');
+    if (backdrop) {
+        backdrop.remove();
+    }
+    
+    // Formu temizle
+    document.getElementById('qr-file-input').value = '';
+    document.getElementById('qr-processing').style.display = 'none';
+});
+
+// Kamera ile çek butonu
+document.getElementById('camera-btn').addEventListener('click', function() {
+    const fileInput = document.getElementById('qr-file-input');
+    fileInput.setAttribute('capture', 'environment');
+    fileInput.click();
+});
+
+// Dosya seç butonu
+document.getElementById('file-btn').addEventListener('click', function() {
+    const fileInput = document.getElementById('qr-file-input');
+    fileInput.removeAttribute('capture');
+    fileInput.click();
+});
+
+// Dosya ile QR okuma
+document.getElementById('qr-file-input').addEventListener('change', function(event) {
+    const file = event.target.files[0];
+    if (!file) return;
+    
+    // İşlem göstergesini göster
+    const processingDiv = document.getElementById('qr-processing');
+    processingDiv.style.display = 'block';
+    
+    const reader = new FileReader();
+    reader.onload = function(e) {
+        const img = new Image();
+        img.onload = function() {
+            const canvas = document.createElement('canvas');
+            const context = canvas.getContext('2d');
+            
+            canvas.width = img.width;
+            canvas.height = img.height;
+            context.drawImage(img, 0, 0);
+            
+            const imageData = context.getImageData(0, 0, canvas.width, canvas.height);
+            const code = jsQR(imageData.data, imageData.width, imageData.height);
+            
+            // İşlem göstergesini gizle
+            processingDiv.style.display = 'none';
+            
+            if (code) {
+                // QR kod bulundu
+                document.getElementById('customer_qr_code').value = code.data;
+                
+                // Başarı butonunu göster ve modal'ı kapatılabilir yap
+                const successBtn = document.getElementById('qr-success-btn');
+                const cancelBtn = document.getElementById('cancel-qr-btn');
+                successBtn.style.display = 'inline-block';
+                cancelBtn.style.display = 'none';
+                
+                // Tamam butonuna click eventi ekle
+                successBtn.onclick = function() {
+                    const modal = document.getElementById('qrScannerModal');
+                    modal.style.display = 'none';
+                    modal.classList.remove('show');
+                    document.body.classList.remove('modal-open');
+                    
+                    const backdrop = document.querySelector('.modal-backdrop');
+                    if (backdrop) {
+                        backdrop.remove();
+                    }
+                };
+                
+                // Modal içeriğini güncelle
+                const modalBody = document.querySelector('#qrScannerModal .modal-body');
+                modalBody.innerHTML = `
+                    <div class="text-center">
+                        <i class="fas fa-check-circle fa-4x text-success mb-3"></i>
+                        <h5 class="text-success">QR Kod Başarıyla Okundu!</h5>
+                        <div class="alert alert-success">
+                            <strong>Kod:</strong> <code>${code.data}</code>
+                        </div>
+                        <p class="text-muted">Modal'ı kapatıp "Manuel Gönder" butonuna basarak işlemi tamamlayın.</p>
+                    </div>
+                `;
+            } else {
+                // QR kod bulunamadı - modal açık kalsın
+                const modalBody = document.querySelector('#qrScannerModal .modal-body');
+                modalBody.innerHTML = `
+                    <div class="text-center">
+                        <i class="fas fa-exclamation-triangle fa-4x text-warning mb-3"></i>
+                        <h5 class="text-warning">QR Kod Bulunamadı!</h5>
+                        <div class="alert alert-warning">
+                            Lütfen net bir QR kod fotoğrafı seçin veya çekin.
+                        </div>
+                        <button type="button" class="btn btn-primary" onclick="location.reload();">
+                            <i class="fas fa-redo"></i> Tekrar Dene
+                        </button>
+                    </div>
+                `;
+            }
+        };
+        img.src = e.target.result;
+    };
+    reader.readAsDataURL(file);
+});
+
+// QR sonuç gösterme fonksiyonu
+function showQRResult(html) {
+    // Sonuç alanı yoksa oluştur
+    let resultDiv = document.getElementById('qr-upload-results');
+    if (!resultDiv) {
+        resultDiv = document.createElement('div');
+        resultDiv.id = 'qr-upload-results';
+        resultDiv.className = 'mt-3';
+        
+        // Form'dan sonra ekle
+        const form = document.getElementById('scan-customer-qr-form');
+        form.parentNode.insertBefore(resultDiv, form.nextSibling);
+    }
+    
+    resultDiv.innerHTML = html;
+}
+
+
+
+
+
+</script>
+</body>
+</html>

@@ -1,0 +1,516 @@
+{% extends "base.html" %}
+
+{% block title %}{{ _('My Purchases') }} - Cafe Sadakat{% endblock %}
+
+{% block content %}
+<div class="container mt-4">
+    <!-- Başlık ve Filtreler -->
+    <div class="row mb-4">
+        <div class="col-12">
+            <div class="card">
+                <div class="card-header bg-primary text-white">
+                    <div class="d-flex justify-content-between align-items-center">
+                        <div>
+                            <h4><i class="fas fa-chart-line"></i> {{ _('My Purchases & Point History') }}</h4>
+                            <small>{{ _('View your product purchases and point earnings by date') }}</small>
+                        </div>
+                        <div class="text-end">
+                            <span class="badge bg-light text-dark fs-6">
+                                <i class="fas fa-star"></i> {{ current_user.points }} {{ _('Active Points') }}
+                            </span>
+                        </div>
+                    </div>
+                </div>
+                <div class="card-body">
+                    <!-- Filtre Formu -->
+                    <form method="GET" class="row g-3">
+                        <div class="col-md-3">
+                            <label for="start_date" class="form-label">{{ _('Start Date') }}</label>
+                            <input type="date" class="form-control" id="start_date" name="start_date" value="{{ start_date or '' }}">
+                        </div>
+                        <div class="col-md-3">
+                            <label for="end_date" class="form-label">{{ _('End Date') }}</label>
+                            <input type="date" class="form-control" id="end_date" name="end_date" value="{{ end_date or '' }}">
+                        </div>
+                        <div class="col-md-3">
+                            <label for="type" class="form-label">{{ _('Activity Type') }}</label>
+                            <select class="form-select" id="type" name="type">
+                                <option value="all" {{ 'selected' if activity_type == 'all' }}>{{ _('All Activities') }}</option>
+                                <option value="purchases" {{ 'selected' if activity_type == 'purchases' }}>{{ _('Only Product Purchases') }}</option>
+                                <option value="points" {{ 'selected' if activity_type == 'points' }}>{{ _('Only Point Earnings') }}</option>
+                                <option value="campaigns" {{ 'selected' if activity_type == 'campaigns' }}>Sadece Kampanya Kullanımları</option>
+                            </select>
+                        </div>
+                        <div class="col-md-3 d-flex align-items-end">
+                            <button type="submit" class="btn btn-primary me-2">
+                                <i class="fas fa-filter"></i> {{ _('Filter') }}
+                            </button>
+                            <a href="{{ url_for('purchase_history') }}" class="btn btn-outline-secondary">
+                                <i class="fas fa-times"></i> {{ _('Clear') }}
+                            </a>
+                        </div>
+                    </form>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- İstatistik Kartları -->
+    <div class="row mb-4">
+        <div class="col-md-3">
+            <div class="card text-center border-primary">
+                <div class="card-body">
+                    <h5 class="card-title text-primary">
+                        <i class="fas fa-shopping-bag"></i> {{ _('Total Purchases') }}
+                    </h5>
+                    <h3 class="text-primary">{{ total_redemptions }}</h3>
+                    <small class="text-muted">{{ _('Product') }}</small>
+                </div>
+            </div>
+        </div>
+        <div class="col-md-3">
+            <div class="card text-center border-success">
+                <div class="card-body">
+                    <h5 class="card-title text-success">
+                        <i class="fas fa-star"></i> {{ _('Points Earned') }}
+                    </h5>
+                    <h3 class="text-success">{{ total_points_earned }}</h3>
+                    <small class="text-muted">{{ _('Points') }}</small>
+                </div>
+            </div>
+        </div>
+        <div class="col-md-3">
+            <div class="card text-center border-warning">
+                <div class="card-body">
+                    <h5 class="card-title text-warning">
+                        <i class="fas fa-gift"></i> {{ _('Points Spent') }}
+                    </h5>
+                    <h3 class="text-warning">{{ total_points_spent }}</h3>
+                    <small class="text-muted">{{ _('Points') }}</small>
+                </div>
+            </div>
+        </div>
+        <div class="col-md-3">
+            <div class="card text-center border-info">
+                <div class="card-body">
+                    <h5 class="card-title text-info">
+                        <i class="fas fa-check-circle"></i> {{ _('Confirmed') }}
+                    </h5>
+                    <h3 class="text-info">{{ confirmed_redemptions }}</h3>
+                    <small class="text-muted">{{ _('Purchase') }}</small>
+                </div>
+            </div>
+        </div>
+    </div>
+    
+    <!-- Kampanya İstatistikleri -->
+    <div class="row mb-4">
+        <div class="col-md-3">
+            <div class="card text-center border-warning">
+                <div class="card-body">
+                    <h5 class="card-title text-warning">
+                        <i class="fas fa-tags"></i> Kampanya Kullanımları
+                    </h5>
+                    <h3 class="text-warning">{{ total_campaign_usages }}</h3>
+                    <small class="text-muted">Kullanılan Kampanya</small>
+                </div>
+            </div>
+        </div>
+        <div class="col-md-9">
+            <div class="alert alert-info">
+                <i class="fas fa-info-circle"></i>
+                <strong>Bilgi:</strong> Kampanya kullanımları artık satın alma geçmişinizde görüntüleniyor. 
+                Seçtiğiniz ürünler ve kullanım detayları aşağıdaki listede yer almaktadır.
+            </div>
+        </div>
+    </div>
+    </div>
+
+    <!-- Aktivite Listesi -->
+    <div class="row">
+        <div class="col-12">
+            <div class="card">
+                <div class="card-header">
+                    <h5>
+                        {% if activity_type == 'purchases' %}
+                            <i class="fas fa-shopping-cart"></i> {{ _('Product Purchases') }}
+                        {% elif activity_type == 'points' %}
+                            <i class="fas fa-star"></i> {{ _('Point Earnings') }}
+                        {% elif activity_type == 'campaigns' %}
+                            <i class="fas fa-tags"></i> Kampanya Kullanımları
+                        {% else %}
+                            <i class="fas fa-list"></i> {{ _('All Activities') }}
+                        {% endif %}
+                    </h5>
+                </div>
+                <div class="card-body">
+                    {% if activity_type == 'all' %}
+                        <!-- Tüm Aktiviteler - Birleştirilmiş Timeline -->
+                        {% set all_activities = [] %}
+                        {% if redemptions %}
+                            {% for redemption in redemptions %}
+                                {% set _ = all_activities.append({'type': 'purchase', 'data': redemption, 'date': redemption.redeemed_at}) %}
+                            {% endfor %}
+                        {% endif %}
+                        {% if point_earnings %}
+                            {% for earning in point_earnings %}
+                                {% set _ = all_activities.append({'type': 'point', 'data': earning, 'date': earning.used_at}) %}
+                            {% endfor %}
+                        {% endif %}
+                        {% if processed_campaign_usages %}
+                            {% for campaign_usage in processed_campaign_usages %}
+                                {% set _ = all_activities.append({'type': 'campaign', 'data': campaign_usage, 'date': campaign_usage.usage.used_at}) %}
+                            {% endfor %}
+                        {% endif %}
+                        
+                        {% if all_activities %}
+                            <div class="timeline">
+                                {% for activity in all_activities | sort(attribute='date', reverse=true) %}
+                                    <div class="timeline-item mb-3">
+                                        <div class="row">
+                                            <div class="col-md-2 text-center">
+                                                <div class="timeline-date">
+                                                    <strong>{{ activity.date.strftime('%d.%m.%Y') }}</strong><br>
+                                                    <small class="text-muted">{{ activity.date.strftime('%H:%M') }}</small>
+                                                </div>
+                                            </div>
+                                            <div class="col-md-10">
+                                                {% if activity.type == 'purchase' %}
+                                                    <div class="card border-warning">
+                                                        <div class="card-body">
+                                                            <div class="d-flex justify-content-between align-items-start">
+                                                                <div>
+                                                                    <h6 class="card-title">
+                                                                        <i class="fas fa-shopping-cart text-warning"></i> 
+                                                                        {{ _('Product Purchase') }}: {{ activity.data.product.name }}
+                                                                    </h6>
+                                                                    <p class="card-text">
+                                                                        <small class="text-muted">
+                                                                            <i class="fas fa-star"></i> {{ activity.data.points_used }} {{ _('points spent') }}<br>
+                                                                            <i class="fas fa-key"></i> {{ _('Confirmation Code') }}: {{ activity.data.confirmation_code }}
+                                                                            {% if activity.data.confirmed_by_branch_id %}
+                                                                                {% set branch = activity.data.confirmed_by_branch %}
+                                                                                <br><i class="fas fa-store"></i> {{ _('Branch') }}: {{ branch.name if branch else _('Unknown') }}
+                                                                            {% endif %}
+                                                                        </small>
+                                                                    </p>
+                                                                </div>
+                                                                <span class="badge bg-{{ 'success' if activity.data.is_confirmed else 'warning' }}">
+                                                                    {{ _('Confirmed') if activity.data.is_confirmed else _('Waiting') }}
+                                                                </span>
+                                                            </div>
+                                                        </div>
+                                                    </div>
+                                                {% elif activity.type == 'point' %}
+                                                    <div class="card border-success">
+                                                        <div class="card-body">
+                                                            <h6 class="card-title">
+                                                                <i class="fas fa-star text-success"></i> 
+                                                                {{ _('Point Earning') }}
+                                                            </h6>
+                                                            <p class="card-text">
+                                                                <small class="text-muted">
+                                                                    <i class="fas fa-plus-circle"></i> {{ _('You earned +1 point') }}<br>
+                                                                    <i class="fas fa-qrcode"></i> {{ _('QR Code') }}: {{ activity.data.code[:20] }}...
+                                                                    {% if activity.data.scanning_branch %}
+                                                                        <br><i class="fas fa-store"></i> {{ activity.data.scanning_branch.name }}
+                                                                    {% endif %}
+                                                                </small>
+                                                            </p>
+                                                        </div>
+                                                    </div>
+                                                {% else %}
+                                                    <!-- Kampanya Kullanımı -->
+                                                    <div class="card border-warning">
+                                                        <div class="card-body">
+                                                            <h6 class="card-title">
+                                                                <i class="fas fa-tags text-warning"></i> 
+                                                                Kampanya Kullanımı: {{ activity.data.campaign.title }}
+                                                            </h6>
+                                                            {% if activity.data.selected_product_name %}
+                                                            <div class="alert alert-success py-1 px-2 mb-2" style="font-size: 0.85em;">
+                                                                <i class="fas fa-check-circle"></i> 
+                                                                <strong>Seçilen Ürün:</strong> {{ activity.data.selected_product_name }}
+                                                                {% if activity.data.selected_product_info and activity.data.selected_product_info.category %}
+                                                                <br><small class="text-muted">{{ activity.data.selected_product_info.category }}</small>
+                                                                {% endif %}
+                                                            </div>
+                                                            {% endif %}
+                                                            <p class="card-text">
+                                                                <small class="text-muted">
+                                                                    <i class="fas fa-gift"></i> {{ activity.data.campaign.description[:100] }}{% if activity.data.campaign.description|length > 100 %}...{% endif %}<br>
+                                                                    {% if activity.data.used_by_branch %}
+                                                                        <i class="fas fa-store"></i> {{ activity.data.used_by_branch.name }}
+                                                                    {% endif %}
+                                                                </small>
+                                                            </p>
+                                                            <span class="badge bg-warning">
+                                                                <i class="fas fa-tags"></i> Kampanya
+                                                            </span>
+                                                        </div>
+                                                    </div>
+                                                {% endif %}
+                                            </div>
+                                        </div>
+                                    </div>
+                                {% endfor %}
+                            </div>
+                        {% else %}
+                            <div class="text-center py-5">
+                                <i class="fas fa-history fa-5x text-muted mb-4"></i>
+                                <h4 class="text-muted">{{ _('No Point Earnings Yet') }}</h4>
+                                <p class="text-muted mb-4">{{ _('You can earn points by scanning QR codes.') }}</p>
+                                <div>
+                                    <a href="{{ url_for('dashboard') }}" class="btn btn-primary me-2">
+                                        <i class="fas fa-qrcode"></i> {{ _('Generate QR') }}
+                                    </a>
+                                    <a href="{{ url_for('redeem_points') }}" class="btn btn-outline-primary">
+                                        <i class="fas fa-gift"></i> {{ _('Use Points') }}
+                                    </a>
+                                </div>
+                            </div>
+                        {% endif %}
+                        
+                    {% elif activity_type == 'purchases' and redemptions %}
+                        <!-- Sadece Ürün Alımları -->
+                        <div class="table-responsive">
+                            <table class="table table-hover">
+                                <thead class="table-light">
+                                    <tr>
+                                        <th><i class="fas fa-box"></i> Ürün</th>
+                                        <th><i class="fas fa-calendar"></i> Tarih</th>
+                                        <th><i class="fas fa-star"></i> Kullanılan Puan</th>
+                                        <th><i class="fas fa-store"></i> Şube</th>
+                                        <th><i class="fas fa-key"></i> Onay Kodu</th>
+                                        <th><i class="fas fa-check-circle"></i> Durum</th>
+                                    </tr>
+                                </thead>
+                                <tbody>
+                                    {% for redemption in (redemptions.items if redemptions.items else redemptions) %}
+                                    <tr>
+                                        <td>
+                                            <strong>{{ redemption.product.name }}</strong>
+                                            {% if redemption.product.description %}
+                                            <br><small class="text-muted">{{ redemption.product.description }}</small>
+                                            {% endif %}
+                                        </td>
+                                        <td>
+                                            <strong>{{ redemption.redeemed_at.strftime('%d.%m.%Y') }}</strong><br>
+                                            <small class="text-muted">{{ redemption.redeemed_at.strftime('%H:%M') }}</small>
+                                        </td>
+                                        <td>
+                                            <span class="badge bg-warning">-{{ redemption.points_used }} Puan</span>
+                                        </td>
+                                        <td>
+                                            {% if redemption.confirmed_by_branch_id %}
+                                                {% set branch = redemption.confirmed_by_branch %}
+                                                <strong>{{ branch.name if branch else _('Unknown') }}</strong>
+                                                {% if branch and branch.address %}
+                                                <br><small class="text-muted">{{ branch.address }}</small>
+                                                {% endif %}
+                                            {% else %}
+                                                <span class="badge bg-warning">{{ _('Not confirmed yet') }}</span>
+                                            {% endif %}
+                                        </td>
+                                        <td>
+                                            <code class="bg-light p-1 rounded">{{ redemption.confirmation_code }}</code>
+                                        </td>
+                                        <td>
+                                            {% if redemption.is_confirmed %}
+                                                <span class="badge bg-success">
+                                                    <i class="fas fa-check"></i> {{ _('Confirmed') }}
+                                                </span>
+                                                {% if redemption.confirmed_at %}
+                                                <br><small class="text-muted">{{ redemption.confirmed_at.strftime('%d.%m.%Y %H:%M') }}</small>
+                                                {% endif %}
+                                            {% else %}
+                                                <span class="badge bg-warning">
+                                                    <i class="fas fa-clock"></i> {{ _('Waiting') }}
+                                                </span>
+                                            {% endif %}
+                                        </td>
+                                    </tr>
+                                    {% endfor %}
+                                </tbody>
+                            </table>
+                        </div>
+                        
+                    {% elif activity_type == 'points' and point_earnings %}
+                        <!-- Sadece Puan Kazanımları -->
+                        <div class="table-responsive">
+                            <table class="table table-hover">
+                                <thead class="table-light">
+                                    <tr>
+                                        <th><i class="fas fa-calendar"></i> Tarih</th>
+                                        <th><i class="fas fa-star"></i> Kazanılan Puan</th>
+                                        <th><i class="fas fa-qrcode"></i> QR Kod</th>
+                                        <th><i class="fas fa-store"></i> Şube</th>
+                                    </tr>
+                                </thead>
+                                <tbody>
+                                    {% for earning in (point_earnings.items if point_earnings.items else point_earnings) %}
+                                    <tr>
+                                        <td>
+                                            <strong>{{ earning.used_at.strftime('%d.%m.%Y') }}</strong><br>
+                                            <small class="text-muted">{{ earning.used_at.strftime('%H:%M') }}</small>
+                                        </td>
+                                        <td>
+                                            <span class="badge bg-success">{{ _('Confirmed') }}</span>
+                                        </td>
+                                        <td>
+                                            <code class="bg-light p-1 rounded">{{ earning.code[:15] }}...</code>
+                                        </td>
+                                        <td>
+                                            {% if earning.scanning_branch %}
+                                                <strong>{{ earning.scanning_branch.name }}</strong>
+                                            {% else %}
+                                                <span class="text-muted">{{ _('Unknown') }}</span>
+                                            {% endif %}
+                                        </td>
+                                    </tr>
+                                    {% endfor %}
+                                </tbody>
+                            </table>
+                        </div>
+                        
+                    {% elif activity_type == 'campaigns' and processed_campaign_usages %}
+                        <!-- Sadece Kampanya Kullanımları -->
+                        <div class="row">
+                            {% for campaign_usage in processed_campaign_usages %}
+                            <div class="col-md-6 mb-4">
+                                <div class="card border-warning h-100">
+                                    <div class="card-body">
+                                        <h6 class="card-title">
+                                            <i class="fas fa-tags text-warning"></i> 
+                                            {{ campaign_usage.campaign.title }}
+                                        </h6>
+                                        {% if campaign_usage.selected_product_name %}
+                                        <div class="alert alert-success py-2 px-3 mb-3">
+                                            <i class="fas fa-check-circle"></i> 
+                                            <strong>Seçilen Ürün:</strong> {{ campaign_usage.selected_product_name }}
+                                            {% if campaign_usage.selected_product_info and campaign_usage.selected_product_info.category %}
+                                            <br><small class="text-muted">Kategori: {{ campaign_usage.selected_product_info.category }}</small>
+                                            {% endif %}
+                                            {% if campaign_usage.selected_product_info and campaign_usage.selected_product_info.description %}
+                                            <br><small class="text-muted">{{ campaign_usage.selected_product_info.description }}</small>
+                                            {% endif %}
+                                        </div>
+                                        {% endif %}
+                                        <p class="card-text">
+                                            <small class="text-muted">
+                                                {{ campaign_usage.campaign.description[:150] }}{% if campaign_usage.campaign.description|length > 150 %}...{% endif %}
+                                            </small>
+                                        </p>
+                                        <div class="mt-3">
+                                            <div class="row text-center">
+                                                <div class="col-6">
+                                                    <small class="text-muted">
+                                                        <i class="fas fa-calendar"></i> Kullanım Tarihi<br>
+                                                        <strong>{{ campaign_usage.usage.used_at.strftime('%d.%m.%Y %H:%M') }}</strong>
+                                                    </small>
+                                                </div>
+                                                <div class="col-6">
+                                                    <small class="text-muted">
+                                                        <i class="fas fa-store"></i> Şube<br>
+                                                        <strong>{{ campaign_usage.used_by_branch.name if campaign_usage.used_by_branch else 'Bilinmiyor' }}</strong>
+                                                    </small>
+                                                </div>
+                                            </div>
+                                        </div>
+                                        <div class="text-center mt-3">
+                                            <span class="badge bg-warning">
+                                                <i class="fas fa-tags"></i> Kampanya Kullanıldı
+                                            </span>
+                                        </div>
+                                    </div>
+                                </div>
+                            </div>
+                            {% endfor %}
+                        </div>
+                        
+                    {% else %}
+                        <div class="text-center py-5">
+                            <i class="fas fa-inbox fa-5x text-muted mb-4"></i>
+                            <h4 class="text-muted">
+                                {% if activity_type == 'purchases' %}
+                                    {{ _('No Product Purchases Yet') }}
+                                {% elif activity_type == 'points' %}
+                                    {{ _('No Point Earnings Yet') }}
+                                {% elif activity_type == 'campaigns' %}
+                                    Henüz Kampanya Kullanımınız Yok
+                                {% else %}
+                                    {{ _('No Data Found') }}
+                                {% endif %}
+                            </h4>
+                            <p class="text-muted mb-4">
+                                {% if activity_type == 'purchases' %}
+                                    {{ _('You can buy products using your points.') }}
+                                {% elif activity_type == 'points' %}
+                                    {{ _('You can earn points by scanning QR codes.') }}
+                                {% elif activity_type == 'campaigns' %}
+                                    Kampanyalara katılarak ürünleri indirimli fiyatlarla alabilirsiniz.
+                                {% else %}
+                                    {{ _('No data found matching the selected criteria.') }}
+                                {% endif %}
+                            </p>
+                            <div>
+                                {% if activity_type == 'purchases' %}
+                                    <a href="{{ url_for('redeem_points') }}" class="btn btn-primary">
+                                        <i class="fas fa-gift"></i> {{ _('Use Points') }}
+                                    </a>
+                                {% elif activity_type == 'points' %}
+                                    <a href="{{ url_for('dashboard') }}" class="btn btn-primary">
+                                        <i class="fas fa-qrcode"></i> {{ _('Generate QR') }}
+                                    </a>
+                                {% elif activity_type == 'campaigns' %}
+                                    <a href="{{ url_for('campaigns') }}" class="btn btn-warning">
+                                        <i class="fas fa-tags"></i> Kampanyaları Görüntüle
+                                    </a>
+                                {% else %}
+                                    <a href="{{ url_for('purchase_history') }}" class="btn btn-outline-secondary">
+                                        <i class="fas fa-times"></i> {{ _('Clear Filters') }}
+                                    </a>
+                                {% endif %}
+                            </div>
+                        </div>
+                    {% endif %}
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+<style>
+.timeline-item {
+    position: relative;
+}
+
+.timeline-date {
+    background: #f8f9fa;
+    border-radius: 10px;
+    padding: 10px;
+    border: 2px solid #dee2e6;
+}
+
+.timeline-item:not(:last-child)::after {
+    content: '';
+    position: absolute;
+    left: 50%;
+    top: 100%;
+    width: 2px;
+    height: 20px;
+    background: #dee2e6;
+    transform: translateX(-50%);
+}
+
+@media (max-width: 768px) {
+    .timeline-date {
+        margin-bottom: 10px;
+    }
+    
+    .timeline-item:not(:last-child)::after {
+        display: none;
+    }
+}
+</style>
+{% endblock %}

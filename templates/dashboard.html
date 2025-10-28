@@ -1,0 +1,595 @@
+{% extends "base.html" %}
+
+{% block title %}{{ _('Dashboard') }} - REEV COFFEE Sadakat{% endblock %}
+
+{% block content %}
+<style>
+/* Yalnızca dashboard için arka plan override */
+body.dashboard-bg {
+    background-attachment: fixed;
+    background-image:
+        radial-gradient(1200px 600px at 0% 0%, rgba(22, 122, 59, 0.10), transparent 60%),
+        radial-gradient(800px 500px at 100% 0%, rgba(34, 197, 94, 0.10), transparent 60%),
+        linear-gradient(135deg, #8b9b90 0%, #92a098 100%);
+}
+@media (prefers-color-scheme: dark) {
+  body.dashboard-bg {
+    background-image:
+        radial-gradient(1200px 600px at 0% 0%, rgba(34, 197, 94, 0.12), transparent 60%),
+        radial-gradient(800px 500px at 100% 0%, rgba(22, 122, 59, 0.12), transparent 60%),
+        linear-gradient(135deg, #0e1512 0%, #0f1c16 100%);
+  }
+}
+</style>
+<style>
+/* Dashboard hero (hoş geldiniz) konteyneri arka plan override */
+body.dashboard-bg .hero-section {
+    background: linear-gradient(135deg, #7f9b8b 0%, #7e9c8b 100%) !important; /* koyu yeşil tonlarda */
+    color: #fff;
+}
+body.dashboard-bg .hero-section .text-white-50 {
+    color: rgba(255,255,255,0.8) !important; /* alt metin daha okunur */
+}
+@media (prefers-color-scheme: dark) {
+  body.dashboard-bg .hero-section {
+    background: linear-gradient(135deg, #a3e0c7 0%, #6eb697 100%) !important;
+  }
+}
+</style>
+<div class="container mt-4">
+    <div class="row g-4">
+        <div class="col-12">
+            <div class="hero-section p-4">
+                <h4 class="mb-1"><i class="fas fa-hand-sparkles"></i> {{ _('Welcome back') }}, {{ current_user.name }}!</h4>
+                <p class="mb-0 text-white-50">{{ _('Here is a quick overview of your account') }}</p>
+            </div>
+        </div>
+
+        <div class="col-lg-8">
+            <div class="card mb-4">
+                <div class="card-header d-flex align-items-center justify-content-between">
+                    <h5 class="mb-0"><i class="fas fa-tachometer-alt"></i> {{ _('Account Summary') }}</h5>
+                </div>
+                <div class="card-body">
+                    <div class="row g-3">
+                        <div class="col-12 col-sm-4">
+                            <div class="p-3 rounded-3 border bg-white bg-opacity-50 h-100">
+                                <div class="d-flex align-items-center">
+                                    <div class="me-3 text-warning"><i class="fas fa-star fa-lg"></i></div>
+                                    <div>
+                                        <div class="fw-bold">{{ _('My Points') }}</div>
+                                        <div class="fs-5">{{ current_user.points }}</div>
+                                        <small class="text-muted">{{ _('Current Points') }}</small>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                        <div class="col-12 col-sm-4">
+                            <div class="p-3 rounded-3 border bg-white bg-opacity-50 h-100">
+                                <div class="d-flex align-items-center">
+                                    <div class="me-3 text-primary"><i class="fas fa-receipt fa-lg"></i></div>
+                                    <div>
+                                        <div class="fw-bold">{{ _('Total Transactions') }}</div>
+                                        <div class="fs-5">{{ transactions|length }}</div>
+                                        <small class="text-muted">{{ _('Last 5 listed') }}</small>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                        <div class="col-12 col-sm-4">
+                            <div class="p-3 rounded-3 border bg-white bg-opacity-50 h-100">
+                                <div class="d-flex align-items-center">
+                                    <div class="me-3 text-success"><i class="fas fa-user-check fa-lg"></i></div>
+                                    <div>
+                                        <div class="fw-bold">{{ _('Membership Date') }}</div>
+                                        <div class="fs-6">{{ current_user.created_at.strftime('%d.%m.%Y') }}</div>
+                                        <small class="text-muted">{{ _('Active member') }}</small>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Ödül İlerleme Halkası -->
+            <div class="card mb-4">
+                <div class="card-header d-flex align-items-center justify-content-between">
+                    <h5 class="mb-0"><i class="fas fa-award"></i> {{ _('Rewards Progress') }}</h5>
+                </div>
+                <div class="card-body">
+                    <div class="row g-3 align-items-center">
+                        <div class="col-6 col-md-4 d-flex justify-content-center">
+                            <div class="reward-ring" style="--percent: {{ reward_progress_percent }}; width: 140px; height: 140px; position: relative; border-radius: 50%; background:
+                                conic-gradient(var(--primary-color) calc(var(--percent) * 1%), rgba(247, 247, 247, 0.08) 0);
+                                display:flex; align-items:center; justify-content:center;">
+                                <div style="position:absolute; inset:10px; background:rgba(226, 228, 226, 0.8); border-radius:50%; backdrop-filter: blur(4px);"></div>
+                                <div style="position:relative; text-align:center;">
+                                    <div class="fw-bold fs-4">{{ reward_progress_percent }}%</div>
+                                    <small class="text-muted">{{ _('to reward') }}</small>
+                                </div>
+                            </div>
+                        </div>
+                        <div class="col-12 col-md-8">
+                            <div class="d-flex flex-column h-100 justify-content-center">
+                                <div class="mb-2">
+                                    <span class="badge text-bg-success"><i class="fas fa-star"></i> {{ _('Current Points') }}: {{ current_user.points }}</span>
+                                </div>
+                                <div class="mb-1">
+                                    <strong>{{ _('Next reward target') }}:</strong> {{ reward_target }} {{ _('points') }}
+                                </div>
+                                <div class="mb-2">
+                                    <strong>{{ _('Points left') }}:</strong> {{ points_to_reward }}
+                                </div>
+                                <small class="text-muted">{{ _('Earn points by scanning QR codes to reach your next reward.') }}</small>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            {% if campaign_activities %}
+            <div class="card mb-4">
+                <div class="card-header d-flex align-items-center justify-content-between">
+                    <h5 class="mb-0"><i class="fas fa-bullhorn"></i> {{ _('Campaign Activities') }}</h5>
+                </div>
+                <div class="card-body">
+                    <ul class="list-group list-group-flush">
+                        {% for act in campaign_activities[:5] %}
+                        <li class="list-group-item bg-transparent">
+                            <div class="d-flex justify-content-between align-items-center">
+                                <div>
+                                    <div class="fw-semibold">{{ act.campaign.title }}</div>
+                                    <small class="text-muted">
+                                        <i class="fas fa-clock"></i> {{ act.used_at.strftime('%d.%m.%Y %H:%M') if act.used_at else '-' }}
+                                    </small>
+                                </div>
+                                <span class="badge rounded-pill text-bg-info">{{ _('Used') }}</span>
+                            </div>
+                        </li>
+                        {% endfor %}
+                    </ul>
+                </div>
+            </div>
+            {% endif %}
+            
+            <div class="row g-3">
+                <div class="col-12 col-sm-6">
+                    <div class="p-3 rounded-3 border bg-white bg-opacity-50 h-100">
+                        <div class="d-flex align-items-center">
+                            <div class="me-3 text-info"><i class="fas fa-chart-line fa-lg"></i></div>
+                            <div>
+                                <div class="fw-bold">{{ _('Points earned in last 30 days') }}</div>
+                                <div class="fs-5">{{ points_last_30 }}</div>
+                                <small class="text-muted">{{ _('Keep earning by scanning QR codes!') }}</small>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+                <div class="col-12 col-sm-6">
+                    <div class="p-3 rounded-3 border bg-white bg-opacity-50 h-100">
+                        <div class="d-flex align-items-center">
+                            <div class="me-3 text-secondary"><i class="fas fa-store fa-lg"></i></div>
+                            <div>
+                                <div class="fw-bold">{{ _('Most visited branch') }}</div>
+                                <div class="fs-6">{{ most_branch_name if most_branch_name else '-' }}</div>
+                                {% if most_branch_count and most_branch_name %}
+                                    <small class="text-muted">{{ most_branch_count }} {{ _('visits') }}</small>
+                                {% else %}
+                                    <small class="text-muted">{{ _('No branch usage yet') }}</small>
+                                {% endif %}
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <div class="col-lg-4">
+            <div class="card mb-4">
+                <div class="card-header">
+                    <h5><i class="fas fa-qrcode"></i> {{ _('My QR Code') }}</h5>
+                </div>
+                <div class="card-body">
+                    <div class="d-flex align-items-center justify-content-between bg-light rounded p-2 mb-2">
+                        <small class="text-muted"><i class="fas fa-info-circle"></i> {{ _('Generate QR code to show to cashier') }}</small>
+                        <span class="badge text-bg-warning" id="qr-countdown-badge" style="display:none"><i class="fas fa-clock"></i> <span id="qr-countdown">5:00</span></span>
+                    </div>
+                    <button class="btn btn-primary w-100" onclick="createMyQR()">
+                        <i class="fas fa-plus"></i> {{ _('Generate QR Code') }}
+                    </button>
+                    
+                    <div id="my-qr-result" class="mt-3" style="display: none;">
+                        <div class="alert alert-success">
+                            <strong>{{ _('Your QR Code is Ready!') }}</strong>
+                            <br>{{ _('Code') }}: <span id="my-qr-code"></span>
+                            <div class="mt-2 small text-muted"><i class="fas fa-shield-alt"></i> {{ _('Single-use QR. Expires in 5 minutes') }}</div>
+                        </div>
+                        <div class="text-center">
+                            <img id="my-qr-image" class="img-fluid" style="max-width: 200px;">
+                            <p class="mt-2"><small>{{ _('Show this code to cashier') }}</small></p>
+                        </div>
+                    </div>
+                </div>
+            </div>
+            
+            
+            <div class="card">
+                <div class="card-header">
+                    <h5><i class="fas fa-bolt"></i> {{ _('Quick Actions') }}</h5>
+                </div>
+                <div class="card-body">
+                    <div class="row g-2">
+                        <div class="col-12">
+                            <a href="{{ url_for('redeem_points') }}" class="btn btn-success w-100">
+                                <i class="fas fa-gift"></i> {{ _('Redeem Points') }}
+                            </a>
+                        </div>
+                        <div class="col-12">
+                            <a href="{{ url_for('campaigns') }}" class="btn btn-outline-primary w-100">
+                                <i class="fas fa-tags"></i> {{ _('View Campaigns') }}
+                            </a>
+                        </div>
+                    </div>
+                </div>
+            </div>
+            
+            <div class="card">
+                <div class="card-header">
+                    <h5><i class="fas fa-info-circle"></i> {{ _('Point System') }}</h5>
+                </div>
+                <div class="card-body">
+                    <ul class="list-unstyled">
+                        <li class="mb-2">
+                            <i class="fas fa-check text-success"></i>
+                            {{ _('Each QR code = 1 point') }}
+                        </li>
+                        
+                        <li class="mb-2">
+                            <i class="fas fa-check text-success"></i>
+                            {{ _('Minimum 5 points usage') }}
+                        </li>
+                        <li class="mb-2">
+                            <i class="fas fa-check text-success"></i>
+                            {{ _('Points are valid for purchases of medium-sized products') }}
+                        </li>
+                        <li>
+                            <i class="fas fa-check text-success"></i>
+                            {{ _('Points never expire') }}
+                        </li>
+                        
+                    </ul>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}
+
+{% block scripts %}
+<script>
+// Bu sayfaya özel arka plan sınıfını ekle/çıkar
+document.addEventListener('DOMContentLoaded', function(){
+  document.body.classList.add('dashboard-bg');
+});
+window.addEventListener('beforeunload', function(){
+  document.body.classList.remove('dashboard-bg');
+});
+function createMyQR() {
+    fetch('/create_my_qr', {
+        method: 'POST',
+        headers: {
+            'Content-Type': 'application/x-www-form-urlencoded',
+        },
+        credentials: 'same-origin'
+    })
+    .then(response => {
+        if (!response.ok) {
+            if (response.status === 429) {
+                return response.json().then(data => {
+                    throw new Error(data.error || 'QR kod oluşturma sınırı aşıldı');
+                });
+            }
+            throw new Error(`HTTP error! status: ${response.status}`);
+        }
+        return response.json();
+    })
+    .then(data => {
+        if (data.success) {
+            // QR kod bilgilerini kullanıcıya özel localStorage'a kaydet
+            const qrData = {
+                code: data.code,
+                qr_image: data.qr_image,
+                created_at: Date.now(),
+                expires_at: Date.now() + (5 * 60 * 1000), // 5 dakika
+                user_id: "{{ current_user.id }}"
+            };
+            localStorage.setItem('activeQR_{{ current_user.id }}', JSON.stringify(qrData));
+            
+            // QR kodu göster
+            showQRCode(data.code, data.qr_image);
+            
+            // 5 dakikalık geri sayım başlat
+            startQRCountdown();
+            
+            // Kalan QR sayısını göster
+            if (data.remaining_qrs !== undefined) {
+                const remainingText = data.remaining_qrs > 0 ? 
+                    `Bu 10 dakika içinde ${data.remaining_qrs} QR daha oluşturabilirsiniz.` : 
+                    'Bu 10 dakika içinde QR oluşturma limitiniz doldu.';
+                
+                const alertDiv = document.querySelector('#my-qr-result .alert');
+                alertDiv.innerHTML += `<br><small class="text-muted">${remainingText}</small>`;
+            }
+        } else {
+            alert('Hata: ' + data.error);
+        }
+    })
+    .catch(error => {
+        console.error('QR kod oluşturma hatası:', error.message || error);
+        console.error('Hata detayları:', {
+            name: error.name,
+            message: error.message,
+            stack: error.stack
+        });
+        alert('QR kod oluşturulurken hata oluştu: ' + (error.message || 'Bilinmeyen hata'));
+    });
+}
+
+let countdownInterval = null;
+
+function startQRCountdown() {
+    // Önceki sayacı temizle
+    if (countdownInterval) {
+        clearInterval(countdownInterval);
+    }
+    
+    let timeLeft = 300; // 5 dakika = 300 saniye
+    const countdownElement = document.getElementById('qr-countdown');
+    const countdownBadge = document.getElementById('qr-countdown-badge');
+    if (countdownBadge) countdownBadge.style.display = 'inline-block';
+    
+    function updateCountdown() {
+        const minutes = Math.floor(timeLeft / 60);
+        const seconds = timeLeft % 60;
+        const formattedTime = `${minutes}:${seconds.toString().padStart(2, '0')}`;
+        
+        countdownElement.textContent = formattedTime;
+        
+        if (timeLeft <= 0) {
+            clearInterval(countdownInterval);
+            // QR kodunu gizle
+            document.getElementById('my-qr-result').style.display = 'none';
+            
+            // localStorage'dan temizle
+            localStorage.removeItem('activeQR_{{ current_user.id }}');
+            
+            // Bilgilendirme mesajı göster
+            alert('QR kodunuzun süresi doldu. Yeni bir QR kod oluşturabilirsiniz.');
+            if (countdownBadge) countdownBadge.style.display = 'none';
+        } else if (timeLeft <= 60) {
+            // Son 1 dakikada kırmızı renk
+            countdownElement.className = 'fw-bold text-danger';
+        } else if (timeLeft <= 120) {
+            // Son 2 dakikada turuncu renk
+            countdownElement.className = 'fw-bold text-warning';
+        }
+        
+        timeLeft--;
+    }
+    
+    // İlk güncelleme
+    updateCountdown();
+    
+    // Her saniye güncelle
+    countdownInterval = setInterval(updateCountdown, 1000);
+}
+
+function showQRCode(code, qrImage) {
+    document.getElementById('my-qr-code').textContent = code;
+    document.getElementById('my-qr-image').src = qrImage;
+    document.getElementById('my-qr-result').style.display = 'block';
+}
+
+function checkActiveQR() {
+    const activeQR = localStorage.getItem('activeQR_{{ current_user.id }}');
+    if (activeQR) {
+        const qrData = JSON.parse(activeQR);
+        const now = Date.now();
+        
+        // QR kodun süresi dolmuş mu kontrol et
+        if (now >= qrData.expires_at) {
+            localStorage.removeItem('activeQR_{{ current_user.id }}');
+            return;
+        }
+        
+        // QR kodu göster
+        showQRCode(qrData.code, qrData.qr_image);
+        
+        // Kalan süreyi hesapla ve geri sayımı başlat
+        const remainingTime = Math.floor((qrData.expires_at - now) / 1000);
+        startQRCountdownWithTime(remainingTime);
+    }
+}
+
+function startQRCountdownWithTime(initialTime) {
+    // Önceki sayacı temizle
+    if (countdownInterval) {
+        clearInterval(countdownInterval);
+    }
+    
+    let timeLeft = initialTime;
+    const countdownElement = document.getElementById('qr-countdown');
+    const countdownBadge = document.getElementById('qr-countdown-badge');
+    if (countdownBadge) countdownBadge.style.display = 'inline-block';
+    
+    function updateCountdown() {
+        const minutes = Math.floor(timeLeft / 60);
+        const seconds = timeLeft % 60;
+        const formattedTime = `${minutes}:${seconds.toString().padStart(2, '0')}`;
+        
+        countdownElement.textContent = formattedTime;
+        
+        if (timeLeft <= 0) {
+            clearInterval(countdownInterval);
+            // QR kodunu gizle
+            document.getElementById('my-qr-result').style.display = 'none';
+            
+            // localStorage'dan temizle
+            localStorage.removeItem('activeQR_{{ current_user.id }}');
+            
+            // Bilgilendirme mesajı göster
+            alert('QR kodunuzun süresi doldu. Yeni bir QR kod oluşturabilirsiniz.');
+        } else if (timeLeft <= 60) {
+            // Son 1 dakikada kırmızı renk
+            countdownElement.className = 'fw-bold text-danger';
+        } else if (timeLeft <= 120) {
+            // Son 2 dakikada turuncu renk
+            countdownElement.className = 'fw-bold text-warning';
+        }
+        
+        timeLeft--;
+    }
+    
+    // İlk güncelleme
+    updateCountdown();
+    
+    // Her saniye güncelle
+    countdownInterval = setInterval(updateCountdown, 1000);
+}
+
+// QR kod kullanıldığında bildirim kontrolü
+function checkQRUsageNotification() {
+    const lastCheck = localStorage.getItem('lastQRCheck') || '0';
+    
+    fetch('/check_qr_usage', {
+        method: 'POST',
+        headers: {
+            'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({
+            last_check: lastCheck
+        }),
+        credentials: 'same-origin'
+    })
+    .then(response => response.json())
+    .then(data => {
+        if (data.success && data.new_points > 0) {
+            // Tebrikler mesajı göster
+            showPointsEarnedNotification(data.new_points);
+            
+            // Son kontrol zamanını güncelle
+            localStorage.setItem('lastQRCheck', Date.now().toString());
+            
+            // QR kodunu gizle (kullanıldıysa)
+            if (data.qr_used) {
+                document.getElementById('my-qr-result').style.display = 'none';
+                localStorage.removeItem('activeQR_{{ current_user.id }}');
+                if (countdownInterval) {
+                    clearInterval(countdownInterval);
+                }
+            }
+        }
+    })
+    .catch(error => {
+        console.error('QR kullanım kontrolü hatası:', error);
+    });
+}
+
+function showPointsEarnedNotification(points) {
+    // Tebrikler modalı oluştur
+    const modal = document.createElement('div');
+    modal.className = 'modal fade';
+    modal.id = 'congratsModal';
+    modal.innerHTML = `
+        <div class="modal-dialog modal-dialog-centered">
+            <div class="modal-content">
+                <div class="modal-body text-center">
+                    <div class="mb-4">
+                        <i class="fas fa-trophy fa-4x text-warning mb-3"></i>
+                        <h3 class="text-success">🎉 Tebrikler! 🎉</h3>
+                        <h4 class="text-primary">${points} Puan Kazandınız!</h4>
+                        <p class="text-muted">QR kodunuz başarıyla okutuldu.</p>
+                    </div>
+                    <button type="button" class="btn btn-success btn-lg" data-bs-dismiss="modal">
+                        <i class="fas fa-check"></i> Harika!
+                    </button>
+                </div>
+            </div>
+        </div>
+    `;
+    
+    document.body.appendChild(modal);
+    
+    // Modal'ı göster
+    const bootstrapModal = new bootstrap.Modal(modal);
+    bootstrapModal.show();
+    
+    // Modal kapandığında DOM'dan kaldır
+    modal.addEventListener('hidden.bs.modal', function() {
+        modal.remove();
+    });
+    
+    // Ses efekti (isteğe bağlı)
+    try {
+        const audio = new Audio('data:audio/wav;base64,UklGRnoGAABXQVZFZm10IBAAAAABAAEAQB8AAEAfAAABAAgAZGF0YQoGAACBhYqFbF1fdJivrJBhNjVgodDbq2EcBj+a2/LDciUFLIHO8tiJNwgZaLvt559NEAxQp+PwtmMcBjiR1/LMeSwFJHfH8N2QQAoUXrTp66hVFApGn+DyvmwhBSuBzvLZiTYIG2m98OScTgwOUarm7blmHgU7k9n1unEiBC13yO/eizEIHWq+8+OWT');
+        audio.play().catch(() => {}); // Ses çalmazsa hata vermesin
+    } catch(e) {}
+}
+
+// Sayfa yüklendiğinde aktif QR kodunu kontrol et
+document.addEventListener('DOMContentLoaded', function() {
+    checkActiveQR();
+    
+    // İlk kontrol
+    checkQRUsageNotification();
+    
+    // Her 3 saniyede bir QR kullanım kontrolü yap
+    setInterval(checkQRUsageNotification, 3000);
+});
+
+</script>
+<script>
+// Chart.js'i lazy-load et ve sparkline grafiğini çiz
+document.addEventListener('DOMContentLoaded', function() {
+    const labels = {{ points_daily_labels|tojson|safe if points_daily_labels else '[]' }};
+    const values = {{ points_daily_values|tojson|safe if points_daily_values else '[]' }};
+    if (!labels.length || !values.length) return;
+
+    function renderSparkline() {
+        const ctx = document.getElementById('pointsSparkline');
+        if (!ctx) return;
+        new Chart(ctx, {
+            type: 'line',
+            data: {
+                labels: labels,
+                datasets: [{
+                    data: values,
+                    borderColor: getComputedStyle(document.documentElement).getPropertyValue('--primary-color').trim() || '#8B4513',
+                    backgroundColor: 'rgba(139, 69, 19, 0.15)',
+                    fill: true,
+                    tension: 0.35,
+                    pointRadius: 0,
+                    borderWidth: 2,
+                }]
+            },
+            options: {
+                plugins: { legend: { display: false } },
+                scales: { x: { display: false }, y: { display: false } },
+                responsive: true,
+                maintainAspectRatio: false,
+            }
+        });
+    }
+
+    if (window.Chart) {
+        renderSparkline();
+    } else {
+        const s = document.createElement('script');
+        s.src = 'https://cdn.jsdelivr.net/npm/chart.js';
+        s.onload = renderSparkline;
+        document.body.appendChild(s);
+    }
+});
+</script>
+{% endblock %}

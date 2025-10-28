@@ -1,0 +1,318 @@
+{% extends "base.html" %}
+
+{% block title %}Raporlar - Admin Panel{% endblock %}
+
+{% block content %}
+<div class="container mt-4">
+    <div class="row">
+        <div class="col-12">
+            <div class="card mb-4">
+                <div class="card-header bg-info text-white">
+                    <h4><i class="fas fa-chart-bar"></i> Detaylı Raporlama Sistemi</h4>
+                </div>
+                <div class="card-body">
+                    <div class="row">
+                        <div class="col-md-3">
+                            <label for="start_date" class="form-label">Başlangıç Tarihi</label>
+                            <input type="date" class="form-control" id="start_date">
+                        </div>
+                        <div class="col-md-3">
+                            <label for="end_date" class="form-label">Bitiş Tarihi</label>
+                            <input type="date" class="form-control" id="end_date">
+                        </div>
+                        <div class="col-md-3">
+                            <label for="branch_filter" class="form-label">Şube Filtresi</label>
+                            <select class="form-control" id="branch_filter">
+                                <option value="">Tüm Şubeler</option>
+                                {% for branch in branches %}
+                                <option value="{{ branch.id }}">{{ branch.name }}</option>
+                                {% endfor %}
+                            </select>
+                        </div>
+                        <div class="col-md-3 d-flex align-items-end">
+                            <button class="btn btn-primary w-100" id="generate-report-btn">
+                                <i class="fas fa-search"></i> Rapor Oluştur
+                            </button>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Rapor Butonları -->
+    <div class="row mb-4">
+        <div class="col-md-2">
+            <button class="btn btn-outline-success w-100" onclick="showReport('points')">
+                <i class="fas fa-star"></i><br>Puan Kazanımları
+            </button>
+        </div>
+        <div class="col-md-2">
+            <button class="btn btn-outline-warning w-100" onclick="showReport('redemptions')">
+                <i class="fas fa-gift"></i><br>Ürün Alımları
+            </button>
+        </div>
+        <div class="col-md-2">
+            <button class="btn btn-outline-info w-100" onclick="showReport('branches')">
+                <i class="fas fa-store"></i><br>Şube Performansı
+            </button>
+        </div>
+        <div class="col-md-2">
+            <button class="btn btn-outline-primary w-100" onclick="showReport('customers')">
+                <i class="fas fa-users"></i><br>Müşteri Analizi
+            </button>
+        </div>
+        <div class="col-md-2">
+            <button class="btn btn-outline-secondary w-100" onclick="showReport('transactions')">
+                <i class="fas fa-exchange-alt"></i><br>İşlem Geçmişi
+            </button>
+        </div>
+        <div class="col-md-2">
+            <button class="btn btn-outline-danger w-100" onclick="showReport('campaigns')">
+                <i class="fas fa-tags"></i><br>Kampanya Raporu
+            </button>
+        </div>
+    </div>
+    
+    <!-- İkinci Satır Butonları -->
+    <div class="row mb-4">
+        <div class="col-md-2 offset-md-10">
+            <button class="btn btn-outline-dark w-100" onclick="exportReport()">
+                <i class="fas fa-download"></i><br>Excel İndir
+            </button>
+        </div>
+    </div>
+
+    <!-- Rapor İçeriği -->
+    <div id="report-content">
+        <div class="row">
+            <!-- Özet Kartlar -->
+            <div class="col-md-3">
+                <div class="card text-center">
+                    <div class="card-body">
+                        <h3 class="text-primary">{{ total_points }}</h3>
+                        <p>Toplam Puan Kazanımı</p>
+                    </div>
+                </div>
+            </div>
+            <div class="col-md-3">
+                <div class="card text-center">
+                    <div class="card-body">
+                        <h3 class="text-success">{{ total_redemptions }}</h3>
+                        <p>Toplam Ürün Alımı</p>
+                    </div>
+                </div>
+            </div>
+            <div class="col-md-3">
+                <div class="card text-center">
+                    <div class="card-body">
+                        <h3 class="text-warning">{{ active_customers }}</h3>
+                        <p>Aktif Müşteri</p>
+                    </div>
+                </div>
+            </div>
+            <div class="col-md-3">
+                <div class="card text-center">
+                    <div class="card-body">
+                        <h3 class="text-info">{{ total_transactions }}</h3>
+                        <p>Toplam İşlem</p>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+
+        <!-- Detaylı Tablolar -->
+        <div class="row mt-4">
+            <div class="col-12">
+                <div class="card">
+                    <div class="card-header">
+                        <h5 id="table-title"><i class="fas fa-table"></i> Detaylı Rapor</h5>
+                    </div>
+                    <div class="card-body">
+                        <div class="table-responsive">
+                            <table class="table table-striped" id="report-table">
+                                <thead id="table-head">
+                                    <!-- Dinamik başlıklar -->
+                                </thead>
+                                <tbody id="table-body">
+                                    <!-- Dinamik içerik -->
+                                </tbody>
+                            </table>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}
+
+{% block scripts %}
+<script>
+
+// Sayfa yüklendiğinde bugünün tarihini ayarla
+document.addEventListener('DOMContentLoaded', function() {
+    const today = new Date().toISOString().split('T')[0];
+    document.getElementById('end_date').value = today;
+    
+    const lastWeek = new Date();
+    lastWeek.setDate(lastWeek.getDate() - 7);
+    document.getElementById('start_date').value = lastWeek.toISOString().split('T')[0];
+    
+    // Rapor oluştur butonuna event listener ekle
+    document.getElementById('generate-report-btn').addEventListener('click', generateReport);
+    
+    // Varsayılan raporu yükle
+    showReport('points');
+});
+
+function generateReport() {
+    const startDate = document.getElementById('start_date').value;
+    const endDate = document.getElementById('end_date').value;
+    const branchId = document.getElementById('branch_filter').value;
+    
+    if (!startDate || !endDate) {
+        alert('Lütfen tarih aralığını seçin!');
+        return;
+    }
+    
+    // Mevcut raporu yenile
+    const activeReport = document.querySelector('.btn-primary')?.getAttribute('data-report') || 'points';
+    showReport(activeReport, startDate, endDate, branchId);
+}
+
+function showReport(type, startDate = null, endDate = null, branchId = null) {
+    // Buton durumlarını güncelle
+    document.querySelectorAll('.btn-outline-success, .btn-outline-warning, .btn-outline-info, .btn-outline-primary, .btn-outline-secondary, .btn-outline-danger').forEach(btn => {
+        btn.classList.remove('btn-primary');
+        const originalClass = btn.className.includes('success') ? 'success' : 
+                             btn.className.includes('warning') ? 'warning' :
+                             btn.className.includes('info') ? 'info' :
+                             btn.className.includes('primary') ? 'primary' : 
+                             btn.className.includes('danger') ? 'danger' : 'secondary';
+        btn.className = `btn btn-outline-${originalClass} w-100`;
+    });
+    
+    // Aktif butonu işaretle - event varsa kullan, yoksa type'a göre bul
+    let activeButton;
+    if (typeof event !== 'undefined' && event.target) {
+        activeButton = event.target;
+    } else {
+        // Type'a göre butonu bul
+        const buttonMap = {
+            'points': 'success',
+            'redemptions': 'warning', 
+            'branches': 'info',
+            'customers': 'primary',
+            'transactions': 'secondary',
+            'campaigns': 'danger'
+        };
+        activeButton = document.querySelector(`.btn-outline-${buttonMap[type]}`);
+    }
+    
+    if (activeButton) {
+        const buttonType = activeButton.className.includes('success') ? 'success' : 
+                          activeButton.className.includes('warning') ? 'warning' :
+                          activeButton.className.includes('info') ? 'info' :
+                          activeButton.className.includes('primary') ? 'primary' : 
+                          activeButton.className.includes('danger') ? 'danger' : 'secondary';
+        activeButton.className = 'btn btn-primary w-100';
+        activeButton.setAttribute('data-report', type);
+    }
+    
+    const params = new URLSearchParams({
+        type: type,
+        start_date: startDate || document.getElementById('start_date').value,
+        end_date: endDate || document.getElementById('end_date').value,
+        branch_id: branchId || document.getElementById('branch_filter').value
+    });
+    
+    fetch(`/admin/report_data?${params}`)
+        .then(response => response.json())
+        .then(data => {
+            updateReportTable(type, data);
+        })
+        .catch(error => {
+            console.error('Rapor yüklenirken hata:', error);
+            alert('Rapor yüklenirken hata oluştu!');
+        });
+}
+
+function updateReportTable(type, data) {
+    const tableTitle = document.getElementById('table-title');
+    const tableHead = document.getElementById('table-head');
+    const tableBody = document.getElementById('table-body');
+    
+    let title, headers, rows;
+    
+    switch(type) {
+        case 'points':
+            title = '<i class="fas fa-star"></i> Puan Kazanım Raporu';
+            headers = ['Müşteri', 'E-posta', 'Toplam Puan', 'Son İşlem', 'Şube'];
+            rows = data.points_data || [];
+            break;
+        case 'redemptions':
+            title = '<i class="fas fa-gift"></i> Ürün Alım Raporu';
+            headers = ['Müşteri', 'Ürün', 'Kullanılan Puan', 'Tarih', 'Durum', 'Onaylayan Şube'];
+            rows = data.redemptions_data || [];
+            break;
+        case 'branches':
+            title = '<i class="fas fa-store"></i> Şube Performans Raporu';
+            headers = ['Şube', 'QR Okutma', 'Verilen Puan', 'Aktif Müşteri', 'Ürün Onayı', 'Performans'];
+            rows = data.branches_data || [];
+            break;
+        case 'customers':
+            title = '<i class="fas fa-users"></i> Müşteri Analiz Raporu';
+            headers = ['Ad Soyad', 'E-posta', 'Telefon', 'Kayıt Tarihi', 'Mevcut Puan', 'Kullanılan Puan', 'Toplam Harcama', 'İşlem Sayısı', 'Son Aktivite', 'Seviye', 'Durum'];
+            rows = data.customers_data || [];
+            break;
+        case 'transactions':
+            title = '<i class="fas fa-exchange-alt"></i> İşlem Geçmiş Raporu';
+            headers = ['Tarih', 'Müşteri', 'İşlem Tipi', 'Tutar/Puan', 'Açıklama'];
+            rows = data.transactions_data || [];
+            break;
+        case 'campaigns':
+            title = '<i class="fas fa-tags"></i> Kampanya Kullanım Raporu';
+            headers = ['Kampanya', 'QR Oluşturulan', 'QR Kullanılan', 'Kullanım Oranı', 'Ürün Sayısı', 'Ürünler', 'En Aktif Şube', 'Durum'];
+            rows = data.campaigns_data || [];
+            break;
+    }
+    
+    tableTitle.innerHTML = title;
+    
+    // Başlıkları oluştur
+    tableHead.innerHTML = '<tr>' + headers.map(h => `<th>${h}</th>`).join('') + '</tr>';
+    
+    // Satırları oluştur
+    if (rows && rows.length > 0) {
+        tableBody.innerHTML = rows.map(row => 
+            '<tr>' + row.map(cell => `<td>${cell}</td>`).join('') + '</tr>'
+        ).join('');
+    } else {
+        tableBody.innerHTML = '<tr><td colspan="' + headers.length + '" class="text-center">Veri bulunamadı</td></tr>';
+    }
+}
+
+
+function exportReport() {
+    const startDate = document.getElementById('start_date').value;
+    const endDate = document.getElementById('end_date').value;
+    const branchId = document.getElementById('branch_filter').value;
+    
+    const params = new URLSearchParams({
+        start_date: startDate || '',
+        end_date: endDate || '',
+        branch_id: branchId || ''
+    });
+    
+    // Doğrudan link oluştur ve tıkla
+    const link = document.createElement('a');
+    link.href = `/admin/export_report?${params}`;
+    link.download = `sadakat_raporu_${new Date().toISOString().split('T')[0]}.xlsx`;
+    document.body.appendChild(link);
+    link.click();
+    document.body.removeChild(link);
+}
+</script>
+{% endblock %}
