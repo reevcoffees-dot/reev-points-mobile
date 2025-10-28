@@ -24,6 +24,12 @@ jobs:
     - name: Install Flutter Dependencies
       run: flutter pub get
       
+    - name: Configure iOS Project
+      run: |
+        # Add DEVELOPMENT_TEAM to iOS project
+        sed -i '' '/CODE_SIGN_STYLE = Automatic;/a\
+				DEVELOPMENT_TEAM = W8Y8345CN9;' ios/Runner.xcodeproj/project.pbxproj
+        
     - name: Build iOS (No Codesign)
       run: |
         flutter build ios --release --no-codesign
