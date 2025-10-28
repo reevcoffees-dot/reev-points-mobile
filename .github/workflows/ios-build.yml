@@ -24,10 +24,10 @@ jobs:
     - name: Install Flutter Dependencies
       run: flutter pub get
       
-    - name: Configure iOS Project
+    - name: Verify iOS Configuration
       run: |
-        # Add DEVELOPMENT_TEAM to iOS project
-        sed -i '' '/CODE_SIGN_STYLE = Automatic;/a\'$'\n''				DEVELOPMENT_TEAM = W8Y8345CN9;' ios/Runner.xcodeproj/project.pbxproj
+        # Verify DEVELOPMENT_TEAM is set
+        grep -n "DEVELOPMENT_TEAM" ios/Runner.xcodeproj/project.pbxproj || echo "DEVELOPMENT_TEAM not found"
         
     - name: Build iOS (No Codesign)
       run: |

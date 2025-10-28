@@ -372,6 +372,7 @@
 				PRODUCT_NAME = "$(TARGET_NAME)";
 				SWIFT_OBJC_BRIDGING_HEADER = "Runner/Runner-Bridging-Header.h";
 				SWIFT_VERSION = 5.0;
+				DEVELOPMENT_TEAM = W8Y8345CN9;
 				VERSIONING_SYSTEM = "apple-generic";
 			};
 			name = Profile;
@@ -573,6 +574,7 @@
 				PRODUCT_NAME = "$(TARGET_NAME)";
 				SWIFT_OBJC_BRIDGING_HEADER = "Runner/Runner-Bridging-Header.h";
 				SWIFT_VERSION = 5.0;
+				DEVELOPMENT_TEAM = W8Y8345CN9;
 				VERSIONING_SYSTEM = "apple-generic";
 			};
 			name = Release;
