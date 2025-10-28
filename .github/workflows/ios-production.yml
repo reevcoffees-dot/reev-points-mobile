@@ -1,0 +1,133 @@
+name: iOS Production Build and Deploy
+
+on:
+  workflow_dispatch:
+    inputs:
+      version:
+        description: 'Version number (e.g., 1.0.0)'
+        required: true
+        default: '1.0.0'
+      build_number:
+        description: 'Build number'
+        required: true
+        default: '1'
+
+jobs:
+  build-and-deploy:
+    runs-on: macos-latest
+    
+    steps:
+    - name: Checkout Repository
+      uses: actions/checkout@v4
+      
+    - name: Setup Flutter
+      uses: subosito/flutter-action@v2
+      with:
+        flutter-version: '3.16.0'
+        channel: 'stable'
+        
+    - name: Install Flutter Dependencies
+      run: |
+        flutter clean
+        rm -f pubspec.lock
+        flutter pub cache clean
+        flutter pub get
+        cd ios && rm -rf Pods Podfile.lock && pod install --repo-update
+      
+    - name: Update Version and Build Number
+      run: |
+        # Update pubspec.yaml with version and build number
+        sed -i '' "s/version: .*/version: ${{ github.event.inputs.version }}+${{ github.event.inputs.build_number }}/" pubspec.yaml
+        
+    - name: Create Keychain and Import Certificate
+      run: |
+        # Create keychain
+        security create-keychain -p "temp123" build.keychain
+        security default-keychain -s build.keychain
+        security unlock-keychain -p "temp123" build.keychain
+        security set-keychain-settings -t 3600 -u build.keychain
+        
+        # Import certificate
+        echo "${{ secrets.CERTIFICATES_P12 }}" | base64 --decode > certificate.p12
+        security import certificate.p12 -k build.keychain -P "${{ secrets.CERTIFICATES_PASSWORD }}" -T /usr/bin/codesign
+        security set-key-partition-list -S apple-tool:,apple: -s -k "temp123" build.keychain
+        
+    - name: Install Provisioning Profile
+      run: |
+        # Create provisioning profiles directory
+        mkdir -p ~/Library/MobileDevice/Provisioning\ Profiles
+        
+        # Install provisioning profile
+        echo "${{ secrets.PROVISIONING_PROFILE }}" | base64 --decode > ~/Library/MobileDevice/Provisioning\ Profiles/ReevPoints.mobileprovision
+        
+    - name: Build iOS App (Signed)
+      run: |
+        flutter build ios --release
+        
+    - name: Create Archive
+      run: |
+        cd ios
+        xcodebuild -workspace Runner.xcworkspace \
+          -scheme Runner \
+          -configuration Release \
+          -destination generic/platform=iOS \
+          -archivePath Runner.xcarchive \
+          archive
+          
+    - name: Export IPA
+      run: |
+        cd ios
+        
+        # Create export options plist
+        cat > ExportOptions.plist << EOF
+        <?xml version="1.0" encoding="UTF-8"?>
+        <!DOCTYPE plist PUBLIC "-//Apple//DTD PLIST 1.0//EN" "http://www.apple.com/DTDs/PropertyList-1.0.dtd">
+        <plist version="1.0">
+        <dict>
+            <key>method</key>
+            <string>app-store</string>
+            <key>teamID</key>
+            <string>${{ secrets.DEVELOPMENT_TEAM }}</string>
+            <key>uploadBitcode</key>
+            <false/>
+            <key>compileBitcode</key>
+            <false/>
+            <key>uploadSymbols</key>
+            <true/>
+        </dict>
+        </plist>
+        EOF
+        
+        # Export IPA
+        xcodebuild -exportArchive \
+          -archivePath Runner.xcarchive \
+          -exportPath . \
+          -exportOptionsPlist ExportOptions.plist
+          
+    - name: Upload to App Store Connect
+      run: |
+        cd ios
+        
+        # Upload IPA to App Store Connect
+        xcrun altool --upload-app \
+          --type ios \
+          --file Runner.ipa \
+          --username "${{ secrets.APPLE_ID }}" \
+          --password "${{ secrets.APP_SPECIFIC_PASSWORD }}" \
+          --verbose
+          
+    - name: Upload Build Artifacts
+      uses: actions/upload-artifact@v4
+      with:
+        name: ios-production-build
+        path: |
+          ios/Runner.xcarchive
+          ios/Runner.ipa
+        retention-days: 30
+        
+    - name: Build Success Notification
+      run: |
+        echo "✅ iOS production build completed successfully!"
+        echo "📱 App: com.reev.reevPointsMobile"
+        echo "🎯 Version: ${{ github.event.inputs.version }}+${{ github.event.inputs.build_number }}"
+        echo "🚀 Uploaded to App Store Connect"
