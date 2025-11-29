@@ -39,9 +39,6 @@ dependencies:
   # firebase_messaging: ^14.7.10
   # flutter_local_notifications: ^16.3.0
   
-  # Utils
-  intl: ^0.18.1
-  
   # Localization
   flutter_localizations:
     sdk: flutter
